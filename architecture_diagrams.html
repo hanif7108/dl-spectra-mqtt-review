@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DL_Spectra_MQTT — Architecture Visualization</title>
+<!-- Pinned to a stable Mermaid 10.x for maximum parser tolerance -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.3/mermaid.min.js"></script>
+<style>
+  :root { --ink:#1f2933; --bg:#fafafa; --card:#ffffff; --accent:#0b6e99; --muted:#6b7280; --border:#e5e7eb; }
+  * { box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Arial, sans-serif;
+         color:var(--ink); background:var(--bg); margin:0; padding:32px 24px 64px; line-height:1.55; }
+  header { max-width:1200px; margin:0 auto 28px; }
+  h1 { font-size:26px; margin:0 0 4px; letter-spacing:-0.2px; }
+  .subtitle { color:var(--muted); font-size:14px; }
+  main { max-width:1200px; margin:0 auto; display:flex; flex-direction:column; gap:28px; }
+  section.card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:22px 24px;
+                 box-shadow:0 1px 2px rgba(0,0,0,0.03); }
+  section.card h2 { font-size:17px; margin:0 0 6px; color:var(--accent); letter-spacing:0.3px; text-transform:uppercase;}
+  section.card .tagline { color:var(--muted); font-size:13px; margin-bottom:14px; }
+  .mermaid { background:#fff; border-radius:6px; padding:14px 8px; overflow:auto; text-align:center; }
+  .legend { display:flex; flex-wrap:wrap; gap:10px 18px; font-size:12.5px; color:var(--muted); margin-top:10px;}
+  .legend b { color:var(--ink); }
+  code { font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size:12.5px;
+         background:#f1f5f9; padding:1px 5px; border-radius:3px; }
+  footer { max-width:1200px; margin:42px auto 0; color:var(--muted); font-size:12px; }
+  .sw { display:inline-block; width:11px; height:11px; border-radius:2px; vertical-align:-1px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Hybrid MQTT-Based Regional EEWS — Architecture</h1>
+  <p class="subtitle">IDA-PTW extension · Java–Sunda Subduction Zone · Universitas Indonesia × BMKG · 2026</p>
+</header>
+
+<main>
+
+<!-- ========== 1. SYSTEM-LEVEL ========== -->
+<section class="card">
+  <h2>1 · System view (C4 container)</h2>
+  <p class="tagline">Every rectangle is an independent service. Arrows carry MQTT topic flows. The broker is a pub/sub bus, not a queue; every topic is a fan-out.</p>
+<pre class="mermaid">
+flowchart LR
+  classDef src fill:#fff4e6,stroke:#cc6a1f,color:#5a2d00,stroke-width:1.4px
+  classDef svc fill:#eaf4fb,stroke:#0b6e99,color:#003a55,stroke-width:1.4px
+  classDef bus fill:#fdf5d3,stroke:#b08800,color:#3a2a00,stroke-width:1.6px
+  classDef sink fill:#eaf7ee,stroke:#2f8a4a,color:#133e21,stroke-width:1.4px
+  classDef edge fill:#f4ecfa,stroke:#6d35a8,color:#2f1056,stroke-width:1.4px
+
+  SL["BMKG SeedLink<br/>100 Hz 3C"]:::src
+  BR["bridge<br/>seedlink_bridge"]:::svc
+  MQ["MQTT v5 broker<br/>EMQX or Mosquitto"]:::bus
+  F["features<br/>physics_features"]:::svc
+  U0["inference<br/>urpd_stage0"]:::svc
+  G1["inference<br/>gate_stage1"]:::svc
+  S2["inference<br/>dluhs2_stage2"]:::svc
+  FU["fusion<br/>decision_engine"]:::svc
+  SP["alerts<br/>site_projector"]:::edge
+  C1["Site UI-FT-B"]:::sink
+  C2["Site BMKG Ops"]:::sink
+  C3["Site Cikubang"]:::sink
+  C4["Dashboard + SCADA"]:::sink
+
+  SL -- MiniSEED --> BR
+  BR -- "raw/net/sta/cha" --> MQ
+  MQ -- raw --> F
+  MQ -- raw --> U0
+  F  -- "feat/3s" --> G1
+  F  -- "feat/3,5,8s" --> S2
+  G1 -- "pred/gate" --> S2
+  U0 -- "pred/urpd" --> FU
+  G1 -- "pred/gate" --> FU
+  S2 -- "pred/psa" --> FU
+  FU -- "alert/region/event_id" --> MQ
+  MQ -- alert --> SP
+  SP -- "alert_site/site_id" --> MQ
+  MQ -- alert_site --> C1
+  MQ -- alert_site --> C2
+  MQ -- alert_site --> C3
+  MQ -- alert --> C4
+</pre>
+  <div class="legend">
+    <span><b><span class="sw" style="background:#fff4e6;border:1px solid #cc6a1f"></span></b> upstream source</span>
+    <span><b><span class="sw" style="background:#eaf4fb;border:1px solid #0b6e99"></span></b> internal service</span>
+    <span><b><span class="sw" style="background:#fdf5d3;border:1px solid #b08800"></span></b> MQTT broker</span>
+    <span><b><span class="sw" style="background:#f4ecfa;border:1px solid #6d35a8"></span></b> site projector</span>
+    <span><b><span class="sw" style="background:#eaf7ee;border:1px solid #2f8a4a"></span></b> downstream consumer</span>
+  </div>
+</section>
+
+<!-- ========== 2. TOPIC TREE ========== -->
+<section class="card">
+  <h2>2 · MQTT topic tree and QoS</h2>
+  <p class="tagline">Only <code>alert/*</code> and <code>alert_site/*</code> are retained so late joiners see the current state. Streaming telemetry is non-retained.</p>
+<pre class="mermaid">
+flowchart TB
+  classDef topic fill:#ffffff,stroke:#64748b,color:#1f2933,stroke-width:1.2px
+
+  ROOT["eews/v1"]:::topic
+  RAW["raw/net/sta/cha<br/>QoS 1 · retained false"]:::topic
+  FEAT["feat/net/sta/window<br/>QoS 1 · retained false"]:::topic
+  PRED["pred/*"]:::topic
+  PURPD["pred/urpd/net/sta<br/>QoS 1 · retained false"]:::topic
+  PGATE["pred/gate/net/sta<br/>QoS 1 · retained false"]:::topic
+  PPSA["pred/psa/net/sta<br/>QoS 1 · retained false"]:::topic
+  ALERT["alert/region/event_id<br/>QoS 2 · retained true"]:::topic
+  ALERTS["alert_site/site_id<br/>QoS 2 · retained true"]:::topic
+  HEALTH["health/service<br/>QoS 0 · retained true"]:::topic
+
+  ROOT --> RAW
+  ROOT --> FEAT
+  ROOT --> PRED
+  PRED --> PURPD
+  PRED --> PGATE
+  PRED --> PPSA
+  ROOT --> ALERT
+  ROOT --> ALERTS
+  ROOT --> HEALTH
+</pre>
+</section>
+
+<!-- ========== 3. SEQUENCE PER EVENT ========== -->
+<section class="card">
+  <h2>3 · Per-event sequence · progressive update M2</h2>
+  <p class="tagline">Wall-clock timeline from P-onset to the third revision of the alert. Every message carries the same <code>event_id</code> with monotonically increasing <code>revision</code>.</p>
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  participant SL as SeedLink
+  participant BR as bridge
+  participant MQ as MQTT broker
+  participant U0 as urpd_stage0
+  participant F  as features
+  participant G1 as gate_stage1
+  participant S2 as dluhs2_stage2
+  participant FU as fusion
+  participant SP as site_projector
+  participant ST as site UI-FT-B
+
+  SL->>BR: 1s MiniSEED chunk
+  BR->>MQ: raw topic
+  MQ->>U0: raw buffer 0.5 s
+  U0->>MQ: pred/urpd p_prob 0.97
+  MQ->>FU: pred/urpd
+  MQ->>F: raw buffer
+  F->>MQ: feat 3 s
+  MQ->>G1: feat 3 s
+  G1->>MQ: pred/gate Damaging ptw 8
+  MQ->>S2: feat 3 s + pred/gate
+  S2->>MQ: pred/psa ptw 3
+  MQ->>FU: pred/psa
+  FU->>MQ: alert revision 1 ptw 3
+  MQ->>SP: alert
+  SP->>MQ: alert_site UI-FT-B rev 1
+  MQ->>ST: alert_site rev 1
+  Note over ST: precautionary action
+  F->>MQ: feat 5 s
+  S2->>MQ: pred/psa ptw 5
+  FU->>MQ: alert revision 2 ptw 5
+  SP->>MQ: alert_site rev 2 tighter bounds
+  F->>MQ: feat 8 s
+  S2->>MQ: pred/psa ptw 8
+  FU->>MQ: alert revision 3 ptw 8
+  SP->>MQ: alert_site rev 3 final
+</pre>
+</section>
+
+<!-- ========== 4. ACCURACY MECHANISMS ========== -->
+<section class="card">
+  <h2>4 · Accuracy mechanisms M1 to M6</h2>
+  <p class="tagline">Where each mechanism plugs in and which variance component it attacks. IDA-PTW baseline tau 0.458, phi 0.598, sigma 0.755. Intra-event phi dominates, so M1, M3, and M4 carry the highest expected gain.</p>
+<pre class="mermaid">
+flowchart LR
+  classDef svc fill:#eaf4fb,stroke:#0b6e99,color:#003a55,stroke-width:1.4px
+  classDef mech fill:#fff5d6,stroke:#c9a225,color:#564203,stroke-width:1.4px
+  classDef risk fill:#ffe6e0,stroke:#c74a32,color:#6b1b0b,stroke-width:1.2px
+
+  RAW["raw"]:::svc
+  U0["Stage 0<br/>URPD"]:::svc
+  FF["features"]:::svc
+  G1["Stage 1<br/>gate"]:::svc
+  S2["Stage 2<br/>DLUHS2<br/>103-period SaT"]:::svc
+  FU["fusion"]:::svc
+  AL["alert"]:::svc
+  SP["site_projector"]:::svc
+
+  RAW --> U0
+  RAW --> FF
+  FF  --> G1
+  FF  --> S2
+  G1  --> S2
+  U0  --> FU
+  S2  --> FU
+  FU  --> AL
+  AL  --> SP
+
+  M1["M1 multi-station<br/>Bayesian fusion<br/>sigma down sqrt N"]:::mech
+  M2["M2 progressive update<br/>3s 5s 8s<br/>+0.5% R2 per second"]:::mech
+  M3["M3 site correction<br/>delta Vs30 dist HV<br/>attacks phi"]:::mech
+  M4["M4 ensemble hypocenter<br/>grid-search Stage 1.5<br/>better log10 dist"]:::mech
+  M5["M5 spectrogram branch<br/>parallel to 1D<br/>+3 to 5% R2"]:::mech
+  M6["M6 physics-guided loss<br/>SHAP re-weighting<br/>tighter p16 p84"]:::mech
+
+  M1 --> FU
+  M2 --> FU
+  M3 --> SP
+  M4 --> FU
+  M5 --> S2
+  M6 --> S2
+
+  V1["phi 0.598<br/>intra-event dominant"]:::risk
+  V2["tau 0.458<br/>inter-event"]:::risk
+  V3["short-window<br/>saturation"]:::risk
+
+  V1 -.-> M1
+  V1 -.-> M3
+  V1 -.-> M4
+  V2 -.-> M5
+  V2 -.-> M6
+  V3 -.-> M2
+</pre>
+  <div class="legend">
+    <span><b><span class="sw" style="background:#eaf4fb;border:1px solid #0b6e99"></span></b> pipeline stage</span>
+    <span><b><span class="sw" style="background:#fff5d6;border:1px solid #c9a225"></span></b> accuracy mechanism</span>
+    <span><b><span class="sw" style="background:#ffe6e0;border:1px solid #c74a32"></span></b> variance component attacked</span>
+  </div>
+</section>
+
+<!-- ========== 5. SUBSCRIBER CONTRACT ========== -->
+<section class="card">
+  <h2>5 · Subscriber contract per site</h2>
+  <p class="tagline">Each external site picks one of three subscription patterns, trading bandwidth for flexibility. Recommended default for operational sites is the per-site topic (ADR-0005).</p>
+<pre class="mermaid">
+flowchart LR
+  classDef site fill:#f4ecfa,stroke:#6d35a8,color:#2f1056,stroke-width:1.3px
+  classDef pay fill:#ffffff,stroke:#64748b,color:#1f2933,stroke-width:1.2px
+
+  S1["Site A<br/>near-field only"]:::site
+  S2["Site B<br/>full spectrum analyst"]:::site
+  S3["Site C<br/>operational building"]:::site
+
+  P1["URPDPayload<br/>p_prob · near_field_flag<br/>spectral_centroid_hz<br/>latency 630 ms"]:::pay
+  P2["AlertPayload<br/>103-period log10 SaT<br/>p16 p84 bounds M1<br/>revision ptw_s M2<br/>SNI-1726 category"]:::pay
+  P3["SiteAlertPayload<br/>Sa at T1 single number<br/>p16 p84 at T1<br/>delta Vs30 dist HV applied<br/>nearest_station"]:::pay
+
+  S1 -- "sub: pred/urpd/IA/CMJI" --> P1
+  S2 -- "sub: alert/jawa_barat/+" --> P2
+  S3 -- "sub: alert_site/UI-FT-B" --> P3
+</pre>
+</section>
+
+<!-- ========== 6. LATENCY BUDGET ========== -->
+<section class="card">
+  <h2>6 · Latency budget</h2>
+  <p class="tagline">Wall-clock from P-onset to first published alert in milliseconds. Stage 0 alone reaches 630 ms for near-field; full Stage 2 chain stays under 3.78 s for the 3 s PTW path.</p>
+<pre class="mermaid">
+gantt
+  title First-alert latency at PTW 3 s
+  dateFormat  X
+  axisFormat  %L
+  section Ingest
+  SeedLink to broker          :done, a1, 0,   50
+  Broker fan-out              :done, a2, 50,  70
+  section Stage 0 Near-field
+  URPD 0.5 s window + infer   :crit, b1, 70,  150
+  section Feature chain
+  Features rolling buffer     :     c1, 150, 300
+  Gate Stage 1 XGBoost        :     c2, 300, 330
+  section Stage 2 Spectrum
+  DLUHS2 fold ensemble CPU    :active, d1, 330, 730
+  section Publish
+  Fusion + alert publish      :     e1, 730, 780
+</pre>
+  <p style="font-size:12.5px;color:var(--muted);margin-top:6px;">Total overhead <b>≤ 780 ms</b>; add the PTW window (3 000 · 5 000 · 8 000 ms) for the full wall-clock alert time. The sub-second URPD near-field flag reaches consumers at t ≈ 630 ms.</p>
+</section>
+
+</main>
+
+<footer>
+  Rendered with Mermaid 10.9.3 · source <code>docs/architecture_diagrams.html</code> — regenerate after any ADR change.
+</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "base",
+    themeVariables: {
+      primaryColor: "#eaf4fb",
+      primaryTextColor: "#003a55",
+      primaryBorderColor: "#0b6e99",
+      lineColor: "#475569",
+      fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Inter, Roboto, sans-serif",
+      fontSize: "14px"
+    },
+    flowchart: { htmlLabels: true, curve: "basis", nodeSpacing: 40, rankSpacing: 60 },
+    sequence: { actorMargin: 40, messageMargin: 18 }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+# DL_Spectra_MQTT — default configuration
+# Override by passing --config custom.yaml or setting EEWS_CONFIG env var.
+
+broker:
+  host: "127.0.0.1"
+  port: 1883
+  client_id_prefix: "eews_v1"
+  keepalive_s: 30
+  # TLS block is optional; enable in prod
+  tls:
+    enabled: false
+    cafile: null
+    certfile: null
+    keyfile: null
+  credentials:
+    username: null
+    password_env: "EEWS_MQTT_PASSWORD"   # name of env var holding the secret
+
+topics:
+  root: "eews/v1"
+
+network:
+  agency: "BMKG"
+  default_net: "IA"
+  # Pilot zone channels matching onsite_jabar_sumsel.yaml in DL_Spectra
+  provinces: ["Jawa Barat", "Banten", "DKI Jakarta", "Lampung", "Bengkulu", "Sumatra Selatan"]
+
+ingest:
+  seedlink:
+    host: "geofon.gfz-potsdam.de"   # placeholder; use BMKG SeedLink in prod
+    port: 18000
+  chunk_seconds: 1.0
+  sampling_rate_hz: 100
+
+features:
+  windows_s: [3, 5, 8]     # adaptive PTW choices from IDA-PTW
+  rolling_buffer_s: 15.0   # keep last 15 s of samples per station
+
+stage0_urpd:
+  model_path: "models/urpd_gbm.pkl"
+  window_s: 0.5
+  p_prob_threshold: 0.80
+  features: ["spec_centroid", "spec_bandwidth", "spec_rolloff",
+             "zero_crossing_rate", "spectral_flatness",
+             "log10_peak_z", "log10_energy"]
+
+stage1_gate:
+  model_path: "models/gate_xgb.json"
+  window_s: 3
+  intensity_classes: ["Weak", "Moderate", "Strong", "Damaging"]
+  damaging_recall_target: 0.91
+
+stage2_dluhs2:
+  # Ported from /Users/hanif/DL_Spectra/experiments/eews_dluhs2_*
+  checkpoints:
+    3: ["experiments/eews_dluhs2_3s/best_model_fold0.pt",
+        "experiments/eews_dluhs2_3s/best_model_fold1.pt",
+        "experiments/eews_dluhs2_3s/best_model_fold2.pt",
+        "experiments/eews_dluhs2_3s/best_model_fold3.pt",
+        "experiments/eews_dluhs2_3s/best_model_fold4.pt"]
+    5: []   # to be produced
+    8: []   # to be produced
+  n_targets: 103
+  in_channels: 1           # Z-component (IDA-PTW baseline)
+  use_aux: true
+  device: "cpu"            # deploy target; GPU opt-in via env
+
+fusion:
+  agreement_window_ms: 500        # align stage outputs within this window
+  multi_station_quorum: 3         # min stations needed before a region alert
+  region_bbox:
+    jawa_barat:
+      lat: [-8.0, -5.5]
+      lon: [105.5, 108.5]
+    sumatra_selatan:
+      lat: [-5.5, -2.5]
+      lon: [102.0, 106.0]
+
+logging:
+  level: "INFO"
+  json: true
+  destination: "stdout"

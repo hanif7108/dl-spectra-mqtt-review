@@ -1,0 +1,43 @@
+# Per-site registry for the site projector (ADR-0005).
+# Each entry is a subscriber site (building, dam, SCADA controller) for which
+# we publish a single Sa(T1) value on eews/v1/alert_site/{site_id}.
+
+sites:
+  - site_id: "UI-FT-B"
+    description: "Universitas Indonesia — Fakultas Teknik Gedung B"
+    lat: -6.3612
+    lon: 106.8261
+    T1_s: 1.2                 # assumed fundamental period of 8-story RC frame
+    Vs30_mps: 370
+    nearest_station: "JAGI"
+    SDC: "SDC-D"              # SNI 1726:2019 category
+    HV_amplification_log10: 0.11  # from microtremor survey
+    dist_to_station_km: 5.8
+
+  - site_id: "BMKG-JKT-OPS"
+    description: "BMKG Pusat Operasi — Jakarta Kemayoran"
+    lat: -6.1753
+    lon: 106.8271
+    T1_s: 0.3                 # low-rise essential facility
+    Vs30_mps: 285
+    nearest_station: "CMJI"
+    SDC: "SDC-D"
+    HV_amplification_log10: 0.18
+    dist_to_station_km: 3.2
+
+  - site_id: "JMB-CIKUBANG"
+    description: "Contoh: Jembatan Cikubang (Tol Cipularang KM 97)"
+    lat: -6.7520
+    lon: 107.4050
+    T1_s: 2.5                 # long-span bridge fundamental
+    Vs30_mps: 420
+    nearest_station: "CMJI"
+    SDC: "SDC-C"
+    HV_amplification_log10: 0.05
+    dist_to_station_km: 18.4
+
+# Registry policy:
+#  - each site subscribes ONLY to eews/v1/alert_site/{site_id}
+#  - corrections (delta_Vs30, delta_dist, delta_HV) are computed at publish time
+#    by src/alerts/site_projector against the IDA-PTW residual table
+#  - T1_s MUST lie within [0.0, 5.0] (the 103-period PSA grid)

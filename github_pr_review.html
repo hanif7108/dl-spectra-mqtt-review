@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DL_Spectra_MQTT · PR #1 Review</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<style>
+  :root {
+    --gh-bg: #ffffff; --gh-bg-muted: #f6f8fa; --gh-border: #d0d7de; --gh-border-soft: #eaeef2;
+    --gh-fg: #1f2328; --gh-fg-muted: #656d76; --gh-accent: #0969da; --gh-success: #1a7f37;
+    --gh-danger: #d1242f; --gh-add-bg: #dafbe1; --gh-add-line: #ccffd8; --gh-del-bg: #ffebe9;
+    --gh-del-line: #ffd7d5; --gh-purple: #8250df; --gh-orange: #bc4c00;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+         color: var(--gh-fg); background: var(--gh-bg-muted); margin: 0; font-size: 14px; line-height: 1.5; }
+  a { color: var(--gh-accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  .topbar { background: #24292f; color: #fff; padding: 10px 20px; display: flex; align-items: center; gap: 14px;
+            border-bottom: 1px solid #1b1f24; }
+  .topbar .logo { font-weight: 600; font-size: 16px; }
+  .topbar .crumb { color: #c9d1d9; font-size: 14px; }
+  .topbar .crumb b { color: #fff; }
+
+  .page { max-width: 1280px; margin: 0 auto; padding: 18px 20px 60px; }
+
+  .repo-header { background: var(--gh-bg); border: 1px solid var(--gh-border); border-radius: 6px 6px 0 0;
+                 padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .repo-title { font-size: 20px; font-weight: 600; }
+  .repo-title small { font-weight: 400; color: var(--gh-fg-muted); margin-left: 8px; }
+  .pr-state { display: inline-flex; align-items: center; gap: 6px; background: var(--gh-success);
+              color: #fff; padding: 5px 12px; border-radius: 14px; font-size: 13px; font-weight: 500; }
+  .pr-meta { color: var(--gh-fg-muted); font-size: 13px; }
+  .pr-meta b { color: var(--gh-fg); }
+
+  .pr-tabs { display: flex; background: var(--gh-bg); border-left: 1px solid var(--gh-border);
+             border-right: 1px solid var(--gh-border); border-bottom: 1px solid var(--gh-border);
+             border-radius: 0 0 6px 6px; overflow: hidden; margin-bottom: 20px; }
+  .pr-tab { padding: 12px 16px; border-right: 1px solid var(--gh-border-soft); font-size: 13px;
+            color: var(--gh-fg); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .pr-tab.active { font-weight: 600; border-bottom: 2px solid #fd8c73; }
+  .pr-tab .badge { background: #ddf4ff; color: var(--gh-accent); border-radius: 20px;
+                   padding: 1px 8px; font-size: 12px; }
+
+  .layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; }
+  @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
+
+  .filetree { background: var(--gh-bg); border: 1px solid var(--gh-border); border-radius: 6px;
+              padding: 12px 10px; font-size: 13px; max-height: 680px; overflow-y: auto; position: sticky; top: 14px; }
+  .filetree h4 { font-size: 12px; color: var(--gh-fg-muted); text-transform: uppercase;
+                 letter-spacing: 0.4px; margin: 0 0 8px 4px; }
+  .filetree ul { list-style: none; padding-left: 12px; margin: 0; }
+  .filetree li { padding: 2px 4px; border-radius: 4px; }
+  .filetree li.dir { color: var(--gh-fg); font-weight: 500; }
+  .filetree li.file { color: var(--gh-fg-muted); }
+  .filetree li.file.changed { color: var(--gh-accent); }
+  .filetree li.file.added { color: var(--gh-success); }
+  .filetree a { color: inherit; }
+
+  .main { display: flex; flex-direction: column; gap: 20px; }
+
+  .card { background: var(--gh-bg); border: 1px solid var(--gh-border); border-radius: 6px; }
+  .card .card-head { padding: 10px 16px; border-bottom: 1px solid var(--gh-border-soft);
+                     display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+  .card .card-body { padding: 14px 16px; }
+  .card .card-body p { margin: 0 0 10px; }
+  .card .card-body ul { margin: 0 0 10px 20px; padding: 0; }
+
+  .pr-body { background: var(--gh-bg); border: 1px solid var(--gh-border); border-radius: 6px;
+             padding: 16px 18px; }
+  .pr-body h3 { margin: 0 0 8px; font-size: 15px; }
+  .pr-body h4 { margin: 14px 0 4px; font-size: 13px; color: var(--gh-fg-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+  .pr-body table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 6px 0 12px; }
+  .pr-body th, .pr-body td { border: 1px solid var(--gh-border-soft); padding: 6px 10px; text-align: left; }
+  .pr-body th { background: var(--gh-bg-muted); }
+
+  .diff-file { background: var(--gh-bg); border: 1px solid var(--gh-border); border-radius: 6px; overflow: hidden; }
+  .diff-file .file-head { padding: 8px 12px; background: var(--gh-bg-muted); border-bottom: 1px solid var(--gh-border-soft);
+                          display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+  .diff-file .filename { font-family: ui-monospace, Menlo, monospace; font-weight: 600; color: var(--gh-fg); }
+  .diff-file .stats { font-size: 12px; color: var(--gh-fg-muted); }
+  .diff-file .stats .add { color: var(--gh-success); }
+  .diff-file .stats .del { color: var(--gh-danger); }
+
+  .diff-hunk { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px;
+               background: var(--gh-bg); border-top: 1px solid var(--gh-border-soft); }
+  .diff-hunk .hunk-header { background: #ddf4ff; color: #0969da; padding: 4px 12px; font-size: 12px; }
+  .diff-hunk .row { display: flex; line-height: 1.55; }
+  .diff-hunk .row .ln { width: 40px; text-align: right; padding: 0 6px; color: var(--gh-fg-muted);
+                       background: var(--gh-bg-muted); user-select: none; font-size: 11.5px; }
+  .diff-hunk .row .code { padding: 0 10px; white-space: pre; flex: 1; }
+  .diff-hunk .row.add { background: var(--gh-add-line); }
+  .diff-hunk .row.add .ln { background: var(--gh-add-bg); color: #1a7f37; }
+  .diff-hunk .row.add .code::before { content: "+"; color: #1a7f37; display: inline-block; width: 14px; }
+  .diff-hunk .row.del { background: var(--gh-del-line); }
+  .diff-hunk .row.del .ln { background: var(--gh-del-bg); color: #d1242f; }
+  .diff-hunk .row.del .code::before { content: "−"; color: #d1242f; display: inline-block; width: 14px; }
+  .diff-hunk .row.ctx .code::before { content: " "; display: inline-block; width: 14px; }
+
+  .review-thread { border-top: 1px dashed var(--gh-border); margin: 8px 12px 14px; padding-top: 10px; }
+  .comment { border: 1px solid var(--gh-border); border-radius: 6px; overflow: hidden;
+             margin: 8px 0; background: var(--gh-bg); }
+  .comment .ch { padding: 8px 14px; background: var(--gh-bg-muted); border-bottom: 1px solid var(--gh-border-soft);
+                 display: flex; gap: 8px; font-size: 13px; align-items: center; }
+  .comment .author { font-weight: 600; }
+  .comment .role { font-size: 11px; color: var(--gh-fg-muted); border: 1px solid var(--gh-border); padding: 1px 6px;
+                   border-radius: 10px; }
+  .comment .when { color: var(--gh-fg-muted); font-size: 12px; }
+  .comment .cb { padding: 10px 14px; font-size: 13.5px; }
+  .comment.suggest .ch { background: #fffbdd; }
+  .suggestion { background: var(--gh-bg-muted); border: 1px solid var(--gh-border-soft); border-radius: 4px;
+                padding: 6px 10px; margin-top: 8px; font-size: 12.5px; }
+  .suggestion .stag { font-size: 11px; font-weight: 600; color: var(--gh-fg-muted);
+                      text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; }
+  .suggestion pre { margin: 0; background: transparent; font-size: 12.5px; }
+
+  .snippet { background: var(--gh-bg); border: 1px solid var(--gh-border); border-radius: 6px; overflow: hidden; }
+  .snippet .snippet-head { padding: 8px 12px; background: var(--gh-bg-muted); border-bottom: 1px solid var(--gh-border-soft);
+                           font-family: ui-monospace, Menlo, monospace; font-weight: 600; font-size: 13px; }
+  .snippet pre { margin: 0; font-size: 12.5px; }
+  .snippet pre code { padding: 12px 14px !important; display: block; }
+
+  .reviewers { display: flex; gap: 14px; align-items: center; font-size: 13px; }
+  .reviewers .avatar { width: 24px; height: 24px; border-radius: 50%; display: inline-flex;
+                       align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 600; }
+  .av-djuhana { background: #6e40c9; }
+  .av-saputro { background: #1f883d; }
+  .av-pramono { background: #cf222e; }
+  .av-nugraha { background: #0969da; }
+  .vote { font-weight: 600; font-size: 12.5px; padding: 2px 8px; border-radius: 10px; display: inline-block; }
+  .vote.approve { color: var(--gh-success); background: #dafbe1; border: 1px solid #a7f3d0; }
+  .vote.request { color: var(--gh-orange); background: #fff1e5; border: 1px solid #ffc89a; }
+
+  .legend { font-size: 12px; color: var(--gh-fg-muted); margin-top: 4px; }
+  .kbd { font-family: ui-monospace, Menlo, monospace; background: var(--gh-bg-muted);
+         border: 1px solid var(--gh-border); border-bottom-width: 2px; border-radius: 3px;
+         padding: 1px 5px; font-size: 11.5px; }
+  details summary { cursor: pointer; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">⚡ UI-BMKG / DL_Spectra_MQTT</span>
+  <span class="crumb">Pull requests · <b>#1</b></span>
+</div>
+
+<div class="page">
+
+  <!-- ============= PR HEADER ============= -->
+  <div class="repo-header">
+    <div>
+      <span class="pr-state">✓ Open</span>
+      <span class="repo-title">feat: hybrid MQTT-based inter-service architecture for onsite-regional EEWS<small>#1</small></span>
+    </div>
+    <div class="pr-meta">
+      <b>hanif0208</b> wants to merge <b>11</b> commits into <code>main</code> from <code>feat/mqtt-hybrid-bus</code>
+      · opened <b>2026-04-21</b> · assignees <b>@djuhana</b>, <b>@saputro</b>, <b>@pramono</b>
+    </div>
+  </div>
+
+  <div class="pr-tabs">
+    <div class="pr-tab active">💬 Conversation <span class="badge">9</span></div>
+    <div class="pr-tab">⎇ Commits <span class="badge">11</span></div>
+    <div class="pr-tab">✓ Checks <span class="badge">5</span></div>
+    <div class="pr-tab active">📄 Files changed <span class="badge">18</span></div>
+  </div>
+
+  <div class="layout">
+
+  <!-- ============= FILE TREE ============= -->
+  <aside class="filetree">
+    <h4>Changed files</h4>
+    <ul>
+      <li class="dir">📁 configs/
+        <ul>
+          <li class="file added"><a href="#f1">default.yaml</a></li>
+          <li class="file added"><a href="#f1">sites.yaml</a></li>
+        </ul>
+      </li>
+      <li class="dir">📁 docs/
+        <ul>
+          <li class="file added"><a href="#f2">architecture.md</a></li>
+          <li class="file added"><a href="#f2">mqtt_topic_schema.md</a></li>
+          <li class="file added"><a href="#f2">literature_review.md</a></li>
+        </ul>
+      </li>
+      <li class="dir">📁 src/common/
+        <ul>
+          <li class="file added"><a href="#f3">schemas.py</a></li>
+          <li class="file added">logging.py</li>
+        </ul>
+      </li>
+      <li class="dir">📁 src/ingest/
+        <ul>
+          <li class="file changed"><a href="#f4">waveform_subscriber.py</a></li>
+        </ul>
+      </li>
+      <li class="dir">📁 src/features/
+        <ul>
+          <li class="file added"><a href="#f5">physics_features.py</a></li>
+        </ul>
+      </li>
+      <li class="dir">📁 src/inference/
+        <ul>
+          <li class="file added">urpd_stage0.py</li>
+          <li class="file added">gate_stage1.py</li>
+          <li class="file changed"><a href="#f6">dluhs2_stage2.py</a></li>
+        </ul>
+      </li>
+      <li class="dir">📁 src/fusion/
+        <ul>
+          <li class="file changed"><a href="#f7">decision_engine.py</a></li>
+        </ul>
+      </li>
+      <li class="dir">📁 src/alerts/
+        <ul>
+          <li class="file added">alert_publisher.py</li>
+          <li class="file changed"><a href="#f8">site_projector.py</a></li>
+        </ul>
+      </li>
+      <li class="dir">📁 src/bridge/
+        <ul>
+          <li class="file added">seedlink_bridge.py</li>
+        </ul>
+      </li>
+    </ul>
+    <p class="legend">● green = added · ● blue = modified</p>
+  </aside>
+
+  <!-- ============= MAIN ============= -->
+  <main class="main">
+
+    <!-- === PR description === -->
+    <section class="pr-body" id="description">
+      <h3>Description</h3>
+      <p>Scaffolds the Hybrid MQTT-Based Regional EEWS extending <code>DL_Spectra</code> (IDA-PTW, IEEE Access submitted April 2026) into a distributed, broker-mediated deployment for the Java-Sunda Subduction Zone (InaTEWS pilot). MQTT v5 is elevated from an implementation detail to a first-class research contribution.</p>
+
+      <h4>Summary of changes</h4>
+      <table>
+        <thead><tr><th>Area</th><th>Change</th><th>ADR</th></tr></thead>
+        <tbody>
+          <tr><td>Bus</td><td>EMQX v5 broker; topic tree under <code>eews/v1/</code>; QoS 1/2/0 policy</td><td>ADR-0001</td></tr>
+          <tr><td>Contracts</td><td>Pydantic v2 envelopes + 7 payload types; shared <code>common/schemas.py</code></td><td>—</td></tr>
+          <tr><td>Inference</td><td>URPD Stage 0 / Gate Stage 1 / DLUHS2 Stage 2 wrapped as services; checkpoints reused unchanged</td><td>ADR-0002</td></tr>
+          <tr><td>Autonomy</td><td>Catalog-independent inference preserved via Stage-1.5 regressor</td><td>ADR-0003</td></tr>
+          <tr><td>Resilience</td><td>Degraded-mode alert when Stage 2 unavailable</td><td>ADR-0004</td></tr>
+          <tr><td>Edge</td><td>Per-site projector: <code>eews/v1/alert_site/{site_id}</code></td><td>ADR-0005</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Out of scope (tracked for follow-up PRs)</h4>
+      <ul>
+        <li>Actual BMKG SeedLink wiring in <code>bridge/</code> (currently stub).</li>
+        <li>Empirical retraining + validation of mechanisms M1–M4.</li>
+        <li>Integration tests against a live EMQX cluster.</li>
+      </ul>
+
+      <h4>How to test</h4>
+      <ul>
+        <li><code>pip install -r requirements.txt</code></li>
+        <li><code>docker compose up emqx</code> (local broker)</li>
+        <li><code>python -m src.bridge.seedlink_bridge --config configs/default.yaml</code></li>
+        <li>Run <code>pytest</code> (currently only schema round-trip tests; more follow in PR #2).</li>
+      </ul>
+
+      <h4>Reviewers</h4>
+      <div class="reviewers">
+        <span><span class="avatar av-djuhana">DD</span> @djuhana <span class="vote approve">approved</span></span>
+        <span><span class="avatar av-saputro">AH</span> @saputro <span class="vote request">changes requested</span></span>
+        <span><span class="avatar av-pramono">SP</span> @pramono <span class="vote approve">approved</span></span>
+      </div>
+    </section>
+
+    <!-- =============================================== -->
+    <!-- === FILE 1: configs/default.yaml === -->
+    <!-- =============================================== -->
+    <article class="diff-file" id="f1">
+      <div class="file-head">
+        <span class="filename">configs/default.yaml</span>
+        <span class="stats"><span class="add">+67</span> / <span class="del">−0</span></span>
+      </div>
+      <div class="diff-hunk">
+        <div class="hunk-header">@@ new file · 67 lines @@</div>
+        <div class="row add"><span class="ln">1</span><span class="code">broker:</span></div>
+        <div class="row add"><span class="ln">2</span><span class="code">  host: "127.0.0.1"</span></div>
+        <div class="row add"><span class="ln">3</span><span class="code">  port: 1883</span></div>
+        <div class="row add"><span class="ln">4</span><span class="code">  client_id_prefix: "eews_v1"</span></div>
+        <div class="row add"><span class="ln">5</span><span class="code">  keepalive_s: 30</span></div>
+        <div class="row ctx"><span class="ln">…</span><span class="code"></span></div>
+        <div class="row add"><span class="ln">31</span><span class="code">stage2_dluhs2:</span></div>
+        <div class="row add"><span class="ln">32</span><span class="code">  checkpoints:</span></div>
+        <div class="row add"><span class="ln">33</span><span class="code">    3: ["experiments/eews_dluhs2_3s/best_model_fold0.pt",</span></div>
+        <div class="row add"><span class="ln">34</span><span class="code">        "experiments/eews_dluhs2_3s/best_model_fold1.pt",</span></div>
+        <div class="row add"><span class="ln">35</span><span class="code">        "experiments/eews_dluhs2_3s/best_model_fold2.pt",</span></div>
+        <div class="row add"><span class="ln">36</span><span class="code">        "experiments/eews_dluhs2_3s/best_model_fold3.pt",</span></div>
+        <div class="row add"><span class="ln">37</span><span class="code">        "experiments/eews_dluhs2_3s/best_model_fold4.pt"]</span></div>
+      </div>
+
+      <div class="review-thread">
+        <div class="comment">
+          <div class="ch"><span class="avatar av-saputro">AH</span><span class="author">@saputro</span>
+            <span class="role">reviewer</span><span class="when">commented on line 3</span></div>
+          <div class="cb">
+            TLS <em>must</em> be on by default for any deployment that touches the BMKG network. Leave the flag
+            but flip the default to <code>true</code> and add a startup assertion in <code>bridge/</code> that
+            refuses to connect to a remote broker when <code>tls.enabled == false</code>.
+          </div>
+        </div>
+        <div class="comment suggest">
+          <div class="ch"><span class="avatar av-nugraha">HN</span><span class="author">@hanif0208</span>
+            <span class="role">author</span><span class="when">replied</span></div>
+          <div class="cb">
+            Agreed. Flipping the default and moving the hardened config to <code>configs/default.yaml</code>;
+            localhost testing stays available via <code>configs/dev-plaintext.yaml</code>.
+            <div class="suggestion">
+              <div class="stag">Suggested change (applied)</div>
+<pre><code class="language-yaml">broker:
+  host: "127.0.0.1"
+  port: 8883              # TLS port
+  tls:
+    enabled: true
+    version: "1.3"
+    cafile: "/etc/ssl/bmkg-root.pem"</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- =============================================== -->
+    <!-- === FILE 2: docs/architecture.md === -->
+    <!-- =============================================== -->
+    <article class="diff-file" id="f2">
+      <div class="file-head">
+        <span class="filename">docs/architecture.md</span>
+        <span class="stats"><span class="add">+176</span> / <span class="del">−0</span></span>
+      </div>
+      <div class="diff-hunk">
+        <div class="hunk-header">@@ new file · ADR-0005 per-site subscriber topic @@</div>
+        <div class="row add"><span class="ln">122</span><span class="code">### ADR-0005 — Per-site subscriber topic (Proposed)</span></div>
+        <div class="row add"><span class="ln">123</span><span class="code"></span></div>
+        <div class="row add"><span class="ln">124</span><span class="code">**Decision.** Introduce a second, per-site topic:</span></div>
+        <div class="row add"><span class="ln">125</span><span class="code">    eews/v1/alert_site/{site_id}</span></div>
+      </div>
+      <div class="review-thread">
+        <div class="comment">
+          <div class="ch"><span class="avatar av-djuhana">DD</span><span class="author">@djuhana</span>
+            <span class="role">reviewer</span><span class="when">approved</span></div>
+          <div class="cb">
+            This ADR resolves the fan-out bandwidth issue for dense urban deployment. 50k buildings × 103 periods × revision chain would overwhelm a regional alert topic; site projection is the right layering.
+          </div>
+        </div>
+        <div class="comment">
+          <div class="ch"><span class="avatar av-pramono">SP</span><span class="author">@pramono</span>
+            <span class="role">BMKG ops</span><span class="when">nit</span></div>
+          <div class="cb">
+            Please add a note that <code>site_id</code> must be unique <em>across BMKG regions</em>. The operational identity provider currently scopes IDs per province; without a regional prefix two sites can collide.
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- =============================================== -->
+    <!-- === FILE 3: src/common/schemas.py === -->
+    <!-- =============================================== -->
+    <article class="diff-file" id="f3">
+      <div class="file-head">
+        <span class="filename">src/common/schemas.py</span>
+        <span class="stats"><span class="add">+168</span> / <span class="del">−0</span></span>
+      </div>
+      <div class="diff-hunk">
+        <div class="hunk-header">@@ Pydantic envelope + 7 payload types @@</div>
+        <div class="row add"><span class="ln">19</span><span class="code">class Envelope(BaseModel, Generic[PayloadT]):</span></div>
+        <div class="row add"><span class="ln">20</span><span class="code">    msg_id: UUID</span></div>
+        <div class="row add"><span class="ln">21</span><span class="code">    produced_at_ns: int</span></div>
+        <div class="row add"><span class="ln">22</span><span class="code">    ingest_at_ns: Optional[int] = None</span></div>
+        <div class="row add"><span class="ln">23</span><span class="code">    schema_version: Literal["1.0.0"] = "1.0.0"</span></div>
+        <div class="row add"><span class="ln">24</span><span class="code">    stage: Literal["raw","feat","urpd","gate","psa","alert"]</span></div>
+        <div class="row add"><span class="ln">25</span><span class="code">    station: Station</span></div>
+        <div class="row add"><span class="ln">26</span><span class="code">    window_s: Optional[float] = None</span></div>
+        <div class="row add"><span class="ln">27</span><span class="code">    payload: PayloadT</span></div>
+      </div>
+      <div class="review-thread">
+        <div class="comment">
+          <div class="ch"><span class="avatar av-saputro">AH</span><span class="author">@saputro</span>
+            <span class="role">reviewer</span><span class="when">blocking</span></div>
+          <div class="cb">
+            Schema version <code>"1.0.0"</code> as a <code>Literal</code> is nice for forward compatibility but brittle for backwards compatibility. Broker validators will reject every 0.x message the moment we bump to 1.1. Use a <code>semver-</code>compatible Pydantic <code>Field</code> with a regex validator instead.
+            <div class="suggestion">
+              <div class="stag">Suggested change</div>
+<pre><code class="language-python">from pydantic import Field, field_validator
+from re import fullmatch as _match
+
+class Envelope(BaseModel, Generic[PayloadT]):
+    schema_version: str = Field(default="1.0.0")
+
+    @field_validator("schema_version")
+    @classmethod
+    def _check_semver(cls, v: str) -> str:
+        if not _match(r"^\d+\.\d+\.\d+$", v):
+            raise ValueError(f"invalid semver: {v!r}")
+        return v</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- =============================================== -->
+    <!-- === FILE 4: waveform_subscriber.py (async rewrite) === -->
+    <!-- =============================================== -->
+    <article class="diff-file" id="f4">
+      <div class="file-head">
+        <span class="filename">src/ingest/waveform_subscriber.py</span>
+        <span class="stats"><span class="add">+58</span> / <span class="del">−42</span></span>
+      </div>
+      <div class="diff-hunk">
+        <div class="hunk-header">@@ -18,42 +18,58 @@ class WaveformSubscriber @@</div>
+        <div class="row del"><span class="ln">18</span><span class="code">import paho.mqtt.client as mqtt</span></div>
+        <div class="row del"><span class="ln">19</span><span class="code"></span></div>
+        <div class="row del"><span class="ln">20</span><span class="code">class WaveformSubscriber:</span></div>
+        <div class="row del"><span class="ln">21</span><span class="code">    def __init__(self, host, port, client_id):</span></div>
+        <div class="row del"><span class="ln">22</span><span class="code">        self._client = mqtt.Client(</span></div>
+        <div class="row del"><span class="ln">23</span><span class="code">            mqtt.CallbackAPIVersion.VERSION2, client_id=client_id</span></div>
+        <div class="row del"><span class="ln">24</span><span class="code">        )</span></div>
+        <div class="row del"><span class="ln">25</span><span class="code">        self._client.on_message = self._on_message</span></div>
+        <div class="row del"><span class="ln">26</span><span class="code"></span></div>
+        <div class="row del"><span class="ln">27</span><span class="code">    def run(self):</span></div>
+        <div class="row del"><span class="ln">28</span><span class="code">        self._client.connect(self._host, self._port)</span></div>
+        <div class="row del"><span class="ln">29</span><span class="code">        self._client.loop_forever()   # blocking</span></div>
+        <div class="row add"><span class="ln">18</span><span class="code">import asyncio</span></div>
+        <div class="row add"><span class="ln">19</span><span class="code">from gmqtt import Client as MQTTClient</span></div>
+        <div class="row add"><span class="ln">20</span><span class="code"></span></div>
+        <div class="row add"><span class="ln">21</span><span class="code">class WaveformSubscriber:</span></div>
+        <div class="row add"><span class="ln">22</span><span class="code">    """Async MQTT5 subscriber. Uses gmqtt for shared-subscription support."""</span></div>
+        <div class="row add"><span class="ln">23</span><span class="code">    def __init__(self, host: str, port: int, client_id: str, group: str = "ingest"):</span></div>
+        <div class="row add"><span class="ln">24</span><span class="code">        self._client = MQTTClient(client_id)</span></div>
+        <div class="row add"><span class="ln">25</span><span class="code">        self._client.on_message = self._on_message</span></div>
+        <div class="row add"><span class="ln">26</span><span class="code">        self._group = group</span></div>
+        <div class="row add"><span class="ln">27</span><span class="code">        self._host, self._port = host, port</span></div>
+        <div class="row add"><span class="ln">28</span><span class="code"></span></div>
+        <div class="row add"><span class="ln">29</span><span class="code">    async def run(self) -&gt; None:</span></div>
+        <div class="row add"><span class="ln">30</span><span class="code">        await self._client.connect(self._host, self._port, version=5)</span></div>
+        <div class="row add"><span class="ln">31</span><span class="code">        # Shared subscription enables horizontal scaling of ingest workers.</span></div>
+        <div class="row add"><span class="ln">32</span><span class="code">        self._client.subscribe(f"$share/{self._group}/eews/v1/raw/#", qos=1)</span></div>
+        <div class="row add"><span class="ln">33</span><span class="code">        await asyncio.Event().wait()</span></div>
+      </div>
+      <div class="review-thread">
+        <div class="comment">
+          <div class="ch"><span class="avatar av-saputro">AH</span><span class="author">@saputro</span>
+            <span class="role">reviewer</span><span class="when">commented</span></div>
+          <div class="cb">
+            Switching to <code>gmqtt</code> is the right call for MQTT5 shared subscriptions. One concern: the <code>paho</code> client was doing auto-reconnect with exponential backoff for free. With <code>gmqtt</code> that needs to be explicit. Please add a watchdog.
+          </div>
+        </div>
+        <div class="comment suggest">
+          <div class="ch"><span class="avatar av-nugraha">HN</span><span class="author">@hanif0208</span>
+            <span class="role">author</span><span class="when">replied</span></div>
+          <div class="cb">
+            Added — moving from <code>asyncio.Event().wait()</code> to a reconnect loop with jittered backoff.
+            <div class="suggestion">
+              <div class="stag">Follow-up patch (pushed)</div>
+<pre><code class="language-python">async def run(self) -> None:
+    backoff = 0.5
+    while True:
+        try:
+            await self._client.connect(self._host, self._port, version=5)
+            self._client.subscribe(f"$share/{self._group}/eews/v1/raw/#", qos=1)
+            await self._client.disconnected  # awaitable that resolves on disconnect
+            backoff = 0.5
+        except Exception as exc:
+            log.warning("mqtt disconnect", error=str(exc), backoff=backoff)
+            await asyncio.sleep(backoff + random.random() * 0.5)
+            backoff = min(backoff * 2, 30.0)</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- =============================================== -->
+    <!-- === FILE 5: physics_features.py === -->
+    <!-- =============================================== -->
+    <article class="diff-file" id="f5">
+      <div class="file-head">
+        <span class="filename">src/features/physics_features.py</span>
+        <span class="stats"><span class="add">+96</span> / <span class="del">−0</span></span>
+      </div>
+      <div class="diff-hunk">
+        <div class="hunk-header">@@ new file · delegates to DL_Spectra/src/physics/feature_extractor.py @@</div>
+        <div class="row add"><span class="ln">41</span><span class="code">def extract_features(acc_z, acc_n, acc_e, dt, vs30, dist_km) -&gt; PhysicsFeatures:</span></div>
+        <div class="row add"><span class="ln">42</span><span class="code">    peak_3ch = float(np.max(np.sqrt(acc_z**2 + acc_n**2 + acc_e**2)))</span></div>
+        <div class="row add"><span class="ln">43</span><span class="code">    vel_z = np.cumsum(acc_z) * dt</span></div>
+        <div class="row add"><span class="ln">44</span><span class="code">    disp_z = np.cumsum(vel_z) * dt</span></div>
+        <div class="row add"><span class="ln">45</span><span class="code">    Pd  = float(np.max(np.abs(disp_z)))</span></div>
+        <div class="row add"><span class="ln">46</span><span class="code">    CAV = float(np.sum(np.abs(acc_z)) * dt)</span></div>
+        <div class="row add"><span class="ln">47</span><span class="code">    IV2 = float(np.sum(vel_z**2) * dt)</span></div>
+      </div>
+      <div class="review-thread">
+        <div class="comment">
+          <div class="ch"><span class="avatar av-djuhana">DD</span><span class="author">@djuhana</span>
+            <span class="role">physics lead</span><span class="when">commented</span></div>
+          <div class="cb">
+            The trapezoidal integration with <code>np.cumsum * dt</code> is a rectangle rule — fine for a streaming first pass but it biases <code>P_d</code> upward by ~1% at 100 Hz. For the Stage 2 aux that bias propagates into <code>log10_Pd</code> and perturbs the residual. Please switch to <code>scipy.integrate.cumulative_trapezoid</code> once you have the import budget.
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- =============================================== -->
+    <!-- === FILE 6: dluhs2_stage2.py (torch.compile) === -->
+    <!-- =============================================== -->
+    <article class="diff-file" id="f6">
+      <div class="file-head">
+        <span class="filename">src/inference/dluhs2_stage2.py</span>
+        <span class="stats"><span class="add">+38</span> / <span class="del">−12</span></span>
+      </div>
+      <div class="diff-hunk">
+        <div class="hunk-header">@@ add torch.compile + batched fold ensemble @@</div>
+        <div class="row del"><span class="ln">52</span><span class="code">        for p in paths:</span></div>
+        <div class="row del"><span class="ln">53</span><span class="code">            m = DLUHS2(n_targets=n_targets, in_channels=in_channels, use_aux=use_aux).to(self.device).eval()</span></div>
+        <div class="row del"><span class="ln">54</span><span class="code">            ck = torch.load(p, map_location=self.device)</span></div>
+        <div class="row del"><span class="ln">55</span><span class="code">            m.load_state_dict(ck)</span></div>
+        <div class="row del"><span class="ln">56</span><span class="code">            models.append(m)</span></div>
+        <div class="row add"><span class="ln">52</span><span class="code">        for p in paths:</span></div>
+        <div class="row add"><span class="ln">53</span><span class="code">            m = DLUHS2(n_targets=n_targets, in_channels=in_channels, use_aux=use_aux).to(self.device).eval()</span></div>
+        <div class="row add"><span class="ln">54</span><span class="code">            ck = torch.load(p, map_location=self.device, weights_only=True)   # PyTorch 2.6 default</span></div>
+        <div class="row add"><span class="ln">55</span><span class="code">            m.load_state_dict(ck["model"] if "model" in ck else ck)</span></div>
+        <div class="row add"><span class="ln">56</span><span class="code">            m = torch.compile(m, mode="reduce-overhead")   # -35% latency on CPU</span></div>
+        <div class="row add"><span class="ln">57</span><span class="code">            models.append(m)</span></div>
+        <div class="row ctx"><span class="ln">…</span><span class="code"></span></div>
+        <div class="row add"><span class="ln">75</span><span class="code">    @torch.no_grad()</span></div>
+        <div class="row add"><span class="ln">76</span><span class="code">    def predict_batch(self, waveforms_z, aux_log10_peak, ptw) -&gt; list[PSAPayload]:</span></div>
+        <div class="row add"><span class="ln">77</span><span class="code">        """Batched over stations; amortises the ensemble over a shared tensor."""</span></div>
+        <div class="row add"><span class="ln">78</span><span class="code">        x = torch.stack([torch.from_numpy(w.astype(np.float32)) for w in waveforms_z])</span></div>
+        <div class="row add"><span class="ln">79</span><span class="code">        x = x.unsqueeze(1).to(self.device)</span></div>
+      </div>
+      <div class="review-thread">
+        <div class="comment">
+          <div class="ch"><span class="avatar av-nugraha">HN</span><span class="author">@hanif0208</span>
+            <span class="role">author</span><span class="when">self-review</span></div>
+          <div class="cb">
+            <code>torch.compile(mode="reduce-overhead")</code> brings Stage 2 from 400 ms to ~260 ms on an Apple M3 and ~190 ms on x86 server. Keeps us well under the 780 ms overhead budget. Batched inference further helps when the fusion agreement window contains ≥3 co-triggering stations.
+          </div>
+        </div>
+        <div class="comment">
+          <div class="ch"><span class="avatar av-pramono">SP</span><span class="author">@pramono</span>
+            <span class="role">BMKG ops</span><span class="when">commented</span></div>
+          <div class="cb">
+            <code>torch.compile</code> cold-start is ~12 s. That's fine in steady state but will break the post-deploy smoke test. Please add a warmup call (one dummy forward pass) at service startup so the first real event doesn't eat the cold-compile cost.
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- =============================================== -->
+    <!-- === FILE 7: decision_engine.py (Bayesian fusion) === -->
+    <!-- =============================================== -->
+    <article class="diff-file" id="f7">
+      <div class="file-head">
+        <span class="filename">src/fusion/decision_engine.py</span>
+        <span class="stats"><span class="add">+74</span> / <span class="del">−6</span></span>
+      </div>
+      <div class="diff-hunk">
+        <div class="hunk-header">@@ implement M1 inverse-variance fusion across N stations @@</div>
+        <div class="row del"><span class="ln">44</span><span class="code">def build_alert(event_id, region, triggered, urpd, gate, psa, ...):</span></div>
+        <div class="row del"><span class="ln">45</span><span class="code">    # current: single-station passthrough</span></div>
+        <div class="row del"><span class="ln">46</span><span class="code">    log10_psa = psa.log10_psa if psa is not None else None</span></div>
+        <div class="row add"><span class="ln">44</span><span class="code">def build_alert(event_id, region, triggered, urpd, gate_by_sta, psa_by_sta, sigma_table, ...):</span></div>
+        <div class="row add"><span class="ln">45</span><span class="code">    # M1 · multi-station Bayesian fusion (inverse-variance weighted mean + posterior var)</span></div>
+        <div class="row add"><span class="ln">46</span><span class="code">    if psa_by_sta:</span></div>
+        <div class="row add"><span class="ln">47</span><span class="code">        log10_psa, log10_psa_p16, log10_psa_p84 = _bayesian_fuse(psa_by_sta, sigma_table)</span></div>
+        <div class="row add"><span class="ln">48</span><span class="code">    else:</span></div>
+        <div class="row add"><span class="ln">49</span><span class="code">        log10_psa = log10_psa_p16 = log10_psa_p84 = None</span></div>
+        <div class="row ctx"><span class="ln">…</span><span class="code"></span></div>
+        <div class="row add"><span class="ln">97</span><span class="code">def _bayesian_fuse(psa_by_sta, sigma_table):</span></div>
+        <div class="row add"><span class="ln">98</span><span class="code">    """Inverse-variance weighted mean per period, plus ±1-sigma posterior bounds."""</span></div>
+        <div class="row add"><span class="ln">99</span><span class="code">    P = np.stack([p.log10_psa for p in psa_by_sta.values()])    # (N, 103)</span></div>
+        <div class="row add"><span class="ln">100</span><span class="code">    V = np.stack([sigma_table.lookup(s, p) for s, p in psa_by_sta.items()])   # (N, 103)</span></div>
+        <div class="row add"><span class="ln">101</span><span class="code">    W = 1.0 / np.square(V)                                      # precisions</span></div>
+        <div class="row add"><span class="ln">102</span><span class="code">    mu   = (W * P).sum(axis=0) / W.sum(axis=0)</span></div>
+        <div class="row add"><span class="ln">103</span><span class="code">    var  = 1.0 / W.sum(axis=0)</span></div>
+        <div class="row add"><span class="ln">104</span><span class="code">    sig  = np.sqrt(var)</span></div>
+        <div class="row add"><span class="ln">105</span><span class="code">    return mu.tolist(), (mu - sig).tolist(), (mu + sig).tolist()</span></div>
+      </div>
+      <div class="review-thread">
+        <div class="comment">
+          <div class="ch"><span class="avatar av-djuhana">DD</span><span class="author">@djuhana</span>
+            <span class="role">physics lead</span><span class="when">blocking</span></div>
+          <div class="cb">
+            The <code>p16/p84</code> bounds computed as <code>μ ± σ</code> assume Gaussian residuals, which is <em>not</em> what the Al Atik decomposition prescribes — the between-event τ and within-event φ combine differently across repeated observations of the <em>same</em> event. For a single event observed by N stations, only the φ² component is divided by N; τ is shared. Please split:
+            <div class="suggestion">
+              <div class="stag">Suggested change</div>
+<pre><code class="language-python">def _bayesian_fuse(psa_by_sta, sigma_table):
+    # Al Atik (2010): σ²_total = τ² + φ². Only φ averages across stations.
+    P   = np.stack([p.log10_psa for p in psa_by_sta.values()])       # (N, 103)
+    TAU = np.stack([sigma_table.lookup_tau(p) for p in psa_by_sta])  # (N, 103)
+    PHI = np.stack([sigma_table.lookup_phi(s, p) for s, p in psa_by_sta.items()])
+    W   = 1.0 / np.square(PHI)                                       # within-event precision
+    mu  = (W * P).sum(axis=0) / W.sum(axis=0)
+    phi_post  = np.sqrt(1.0 / W.sum(axis=0))
+    sigma_post = np.sqrt(TAU[0] ** 2 + phi_post ** 2)                # τ does NOT shrink by √N
+    return mu.tolist(), (mu - sigma_post).tolist(), (mu + sigma_post).tolist()</code></pre>
+            </div>
+            Ref: Al Atik et al., SRL 81(5), 2010.
+          </div>
+        </div>
+        <div class="comment suggest">
+          <div class="ch"><span class="avatar av-nugraha">HN</span><span class="author">@hanif0208</span>
+            <span class="role">author</span><span class="when">replied</span></div>
+          <div class="cb">
+            Very good catch. You're right — the manuscript Section IV-A correctly states that only φ shrinks, but the code conflated the two. Pushing the corrected version and adding a unit test that asserts <code>σ_post ≥ τ</code> for all N.
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- =============================================== -->
+    <!-- === FILE 8: site_projector.py (residual table) === -->
+    <!-- =============================================== -->
+    <article class="diff-file" id="f8">
+      <div class="file-head">
+        <span class="filename">src/alerts/site_projector.py</span>
+        <span class="stats"><span class="add">+52</span> / <span class="del">−14</span></span>
+      </div>
+      <div class="diff-hunk">
+        <div class="hunk-header">@@ replace placeholder Δ with IDA-PTW residual lookup @@</div>
+        <div class="row del"><span class="ln">131</span><span class="code">@staticmethod</span></div>
+        <div class="row del"><span class="ln">132</span><span class="code">def _delta_vs30_db(vs30_mps: float, T: float) -&gt; float:</span></div>
+        <div class="row del"><span class="ln">133</span><span class="code">    vs_ref = 400.0</span></div>
+        <div class="row del"><span class="ln">134</span><span class="code">    return -0.25 * np.log10(max(vs30_mps, 50.0) / vs_ref) * (1.0 + 0.5 * T)</span></div>
+        <div class="row add"><span class="ln">131</span><span class="code">class IDAResidualTable:</span></div>
+        <div class="row add"><span class="ln">132</span><span class="code">    """Per-period Vs30 / distance / H-V residual correction surfaces.</span></div>
+        <div class="row add"><span class="ln">133</span><span class="code">    Fitted once from /Users/hanif/DL_Spectra/reports/residuals/per_period.csv.</span></div>
+        <div class="row add"><span class="ln">134</span><span class="code">    Interpolates linearly in log-Vs30 × period grid."""</span></div>
+        <div class="row add"><span class="ln">135</span><span class="code">    def __init__(self, csv_path: str):</span></div>
+        <div class="row add"><span class="ln">136</span><span class="code">        import pandas as pd</span></div>
+        <div class="row add"><span class="ln">137</span><span class="code">        df = pd.read_csv(csv_path)</span></div>
+        <div class="row add"><span class="ln">138</span><span class="code">        self._periods = df["period_s"].values</span></div>
+        <div class="row add"><span class="ln">139</span><span class="code">        self._coef_vs30 = df["coef_log10_vs30"].values  # shape (103,)</span></div>
+        <div class="row add"><span class="ln">140</span><span class="code">        self._coef_dist = df["coef_log10_dist"].values</span></div>
+        <div class="row add"><span class="ln">141</span><span class="code">        self._vs30_ref = 400.0</span></div>
+        <div class="row add"><span class="ln">142</span><span class="code"></span></div>
+        <div class="row add"><span class="ln">143</span><span class="code">    def delta_vs30(self, vs30: float, T: float) -&gt; float:</span></div>
+        <div class="row add"><span class="ln">144</span><span class="code">        c = float(np.interp(T, self._periods, self._coef_vs30))</span></div>
+        <div class="row add"><span class="ln">145</span><span class="code">        return c * np.log10(max(vs30, 50.0) / self._vs30_ref)</span></div>
+      </div>
+      <div class="review-thread">
+        <div class="comment">
+          <div class="ch"><span class="avatar av-pramono">SP</span><span class="author">@pramono</span>
+            <span class="role">BMKG ops</span><span class="when">approved</span></div>
+          <div class="cb">
+            Much better than the hardcoded constant. The residual CSV from DL_Spectra reports is the authoritative source. One operational note: BMKG rotates site surveys on a 3-year cadence, so please expose the CSV path via config and document the refresh SOP in the runbook.
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ================================================= -->
+    <!-- === ALTERNATIVE IMPLEMENTATIONS (standalone) === -->
+    <!-- ================================================= -->
+    <section class="pr-body" id="alt">
+      <h3>📑 Alternative implementations considered</h3>
+      <p>Per request from <b>@saputro</b>, here are three alternatives sketched during design review. None were merged; this record preserves the reasoning so future contributors don't re-litigate.</p>
+
+      <details>
+        <summary>Alternative A · Replace MQTT with NATS JetStream</summary>
+        <div class="snippet">
+          <div class="snippet-head">src/common/bus_nats.py — prototype, NOT merged</div>
+<pre><code class="language-python">"""Alternative bus using NATS JetStream.
+Rejected in ADR-0001 discussion: stronger durability guarantees but far fewer
+edge-device client libraries. Revisit if we add archival semantics to the bus."""
+
+import asyncio
+from nats.aio.client import Client as NATS
+from nats.js.api import StreamConfig
+
+class NATSEewsBus:
+    async def connect(self, servers: list[str]) -> None:
+        self._nc = NATS()
+        await self._nc.connect(servers=servers, name="eews_v1")
+        self._js = self._nc.jetstream()
+        await self._js.add_stream(StreamConfig(
+            name="EEWS_V1",
+            subjects=["eews.v1.>"],
+            retention="limits",
+            max_age=3600 * 24,    # 1-day durable retention
+        ))
+
+    async def publish(self, subject: str, payload: bytes) -> None:
+        await self._js.publish(subject, payload)</code></pre>
+        </div>
+        <p style="margin-top:8px;">
+          <b>Why rejected:</b> (i) no Pydantic/paho-equivalent Python ecosystem for edge agents;
+          (ii) NATS retention duplicates the planned SeedLink archival mirror; (iii) added operational
+          burden of JetStream clustering for a feature we don't yet need.
+        </p>
+      </details>
+
+      <details style="margin-top:10px;">
+        <summary>Alternative B · Single-process actor model (Ray) instead of service containers</summary>
+        <div class="snippet">
+          <div class="snippet-head">src/actors.py — prototype, NOT merged</div>
+<pre><code class="language-python">"""Ray actor-based pipeline. Rejected: couples all stages into one failure domain."""
+import ray
+from src.inference.urpd_stage0 import URPDService
+from src.inference.dluhs2_stage2 import DLUHS2Service
+
+@ray.remote
+class URPDActor:
+    def __init__(self, model_path: str):
+        self._s = URPDService(model_path)
+    def predict(self, z, dt): return self._s.predict(z, dt)
+
+@ray.remote
+class DLUHS2Actor:
+    def __init__(self, cfg):
+        self._s = DLUHS2Service(**cfg)
+    def predict(self, z, aux, ptw): return self._s.predict(z, aux, ptw)
+
+def build_pipeline():
+    u = URPDActor.remote("models/urpd.pkl")
+    d = DLUHS2Actor.remote({"checkpoints_by_ptw": {3: [...], 5: [...]}})
+    return u, d</code></pre>
+        </div>
+        <p style="margin-top:8px;">
+          <b>Why rejected:</b> elegant local dev experience but breaks ADR-0001 (messaging as contribution)
+          and ADR-0004 (graceful degradation). A Ray cluster failure takes down every stage simultaneously.
+          Also impossible to deploy per-site projector to the edge.
+        </p>
+      </details>
+
+      <details style="margin-top:10px;">
+        <summary>Alternative C · Rust reimplementation of the bridge for hard-real-time ingest</summary>
+        <div class="snippet">
+          <div class="snippet-head">src/bridge/bridge.rs — prototype, NOT merged</div>
+<pre><code class="language-rust">// Rust SeedLink → MQTT bridge prototype.
+// Rejected: adds a second language toolchain; Python bridge meets the 50 ms jitter budget.
+
+use rumqttc::{MqttOptions, AsyncClient, QoS};
+use tokio::sync::mpsc;
+
+pub async fn run(
+    seedlink_addr: &amp;str,
+    mqtt_host: &amp;str,
+    mqtt_port: u16,
+) -&gt; anyhow::Result&lt;()&gt; {
+    let mut opts = MqttOptions::new("eews_v1_bridge", mqtt_host, mqtt_port);
+    opts.set_keep_alive(std::time::Duration::from_secs(30));
+    let (client, mut eventloop) = AsyncClient::new(opts, 1024);
+
+    let (tx, mut rx) = mpsc::channel::&lt;(String, Vec&lt;u8&gt;)&gt;(4096);
+    tokio::spawn(async move {
+        // seedlink_rs::client::stream(seedlink_addr, tx).await.ok();
+    });
+    while let Some((topic, payload)) = rx.recv().await {
+        client.publish(topic, QoS::AtLeastOnce, false, payload).await?;
+    }
+    Ok(())
+}</code></pre>
+        </div>
+        <p style="margin-top:8px;">
+          <b>Why rejected:</b> the Python bridge with <code>paho-mqtt</code> comfortably meets the 50 ms
+          budget (measured: p99 = 31 ms at 200-station load). Introducing a second language would slow
+          contribution onboarding for the UI/BMKG research group. Revisit if we ever target <em>10 000+</em>
+          stations or move ingest to a microcontroller.
+        </p>
+      </details>
+    </section>
+
+    <!-- =============================================== -->
+    <!-- === CI CHECKS === -->
+    <!-- =============================================== -->
+    <section class="pr-body" id="ci">
+      <h3>✓ Continuous integration</h3>
+      <table>
+        <thead><tr><th>Check</th><th>Status</th><th>Details</th></tr></thead>
+        <tbody>
+          <tr><td>ruff</td><td style="color:var(--gh-success)">✓ passed</td><td>0 issues, 27 files</td></tr>
+          <tr><td>pytest schemas</td><td style="color:var(--gh-success)">✓ passed</td><td>14 / 14 round-trip tests</td></tr>
+          <tr><td>mypy --strict</td><td style="color:var(--gh-success)">✓ passed</td><td>0 type errors</td></tr>
+          <tr><td>broker-integration</td><td style="color:var(--gh-orange)">⊘ skipped</td><td>EMQX container not available in CI yet (tracked #2)</td></tr>
+          <tr><td>pydoctest</td><td style="color:var(--gh-success)">✓ passed</td><td>100% public API documented</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- === MERGE PANEL === -->
+    <section class="pr-body" id="merge">
+      <h3>🔒 Merge status</h3>
+      <p><b>2 approved · 1 requested changes · 0 pending</b> — merge is currently <span class="vote request">blocked</span> by @saputro's M1 fusion correctness concern. Resolve in next commit and re-request review.</p>
+      <p style="color:var(--gh-fg-muted);font-size:13px;">
+        After resolution: squash-merge into <code>main</code> as <code>feat(bus): hybrid MQTT-based inter-service architecture (#1)</code>.
+        Deploy pipeline is blocked pending the follow-up <code>feat/m1-m4-empirical-validation</code> PR.
+      </p>
+    </section>
+
+  </main>
+  </div>
+</div>
+
+<script>
+  // Initialize syntax highlighting for all code blocks
+  document.querySelectorAll("pre code").forEach((el) => hljs.highlightElement(el));
+</script>
+
+</body>
+</html>

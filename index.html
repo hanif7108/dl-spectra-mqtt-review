@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MQTT-Hybrid EEWS · Systems Design Review · Universitas Indonesia × BMKG</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.3/mermaid.min.js"></script>
+<style>
+  :root {
+    --c-primary: #0b6e99;
+    --c-primary-dark: #074d6b;
+    --c-secondary: #6d35a8;
+    --c-accent-warn: #bc4c00;
+    --c-accent-ok: #1a7f37;
+    --c-accent-danger: #cf222e;
+    --c-ink: #1f2328;
+    --c-muted: #6b7280;
+    --c-border: #d0d7de;
+    --c-border-soft: #eaeef2;
+    --c-bg: #f6f8fa;
+    --c-card: #ffffff;
+    --c-abstract: #f0f7fb;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.07);
+    --radius: 9px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 120px; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    color: var(--c-ink);
+    background: var(--c-bg);
+    font-size: 15px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--c-primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: var(--c-border-soft);
+    padding: 1.5px 5px;
+    border-radius: 3px;
+  }
+
+  /* =========== HEADER / NAV =========== */
+  .banner {
+    background: linear-gradient(95deg, #074d6b, #0b6e99 55%, #0b6e99);
+    color: #fff;
+    padding: 10px 24px;
+    font-size: 12.5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  .banner .tag {
+    background: rgba(255,255,255,0.12);
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  .lang-toggle {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.28);
+    color: #fff;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 14px;
+    cursor: pointer;
+  }
+  .lang-toggle:hover { background: rgba(255,255,255,0.30); }
+
+  header.hero {
+    background: #fff;
+    border-bottom: 1px solid var(--c-border);
+    padding: 26px 24px 18px;
+    text-align: center;
+  }
+  header.hero h1 {
+    font-size: 22px;
+    margin: 0 0 6px;
+    color: var(--c-primary-dark);
+    letter-spacing: -0.2px;
+    line-height: 1.3;
+  }
+  header.hero .sub {
+    color: var(--c-muted);
+    font-size: 13.5px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  header.hero .authors {
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--c-muted);
+  }
+  header.hero .authors b { color: var(--c-ink); }
+
+  nav.topnav {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: #fff;
+    border-bottom: 1px solid var(--c-border);
+    display: flex;
+    overflow-x: auto;
+    box-shadow: var(--shadow-sm);
+  }
+  nav.topnav a {
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--c-ink);
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  nav.topnav a:hover { color: var(--c-primary); text-decoration: none; }
+  nav.topnav a.active {
+    color: var(--c-primary);
+    border-bottom-color: var(--c-primary);
+  }
+
+  /* =========== MAIN =========== */
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 28px 20px 80px;
+  }
+  section.panel {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    padding: 24px 26px;
+    margin-bottom: 22px;
+    scroll-margin-top: 90px;
+  }
+  section.panel h2 {
+    font-size: 20px;
+    margin: 0 0 6px;
+    color: var(--c-primary-dark);
+    letter-spacing: -0.1px;
+  }
+  section.panel .lede {
+    color: var(--c-muted);
+    font-size: 13.5px;
+    margin: 0 0 18px;
+    border-bottom: 1px solid var(--c-border-soft);
+    padding-bottom: 12px;
+  }
+  section.panel h3 {
+    font-size: 15px;
+    margin: 16px 0 8px;
+    color: var(--c-ink);
+  }
+
+  .abstract {
+    background: var(--c-abstract);
+    border: 1px solid #d7e6f0;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    text-align: justify;
+  }
+  .abstract p { margin: 0 0 8px; }
+  .abstract p:last-child { margin-bottom: 0; }
+
+  /* metric cards */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .metric {
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-left: 4px solid var(--c-primary);
+    border-radius: 6px;
+    padding: 14px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .metric:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .metric.secondary { border-left-color: var(--c-secondary); }
+  .metric.warn { border-left-color: var(--c-accent-warn); }
+  .metric.ok { border-left-color: var(--c-accent-ok); }
+  .metric .value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--c-primary-dark);
+    line-height: 1.1;
+  }
+  .metric.secondary .value { color: var(--c-secondary); }
+  .metric.warn .value { color: var(--c-accent-warn); }
+  .metric.ok .value { color: var(--c-accent-ok); }
+  .metric .label {
+    font-size: 11.5px;
+    color: var(--c-muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .metric .hint {
+    font-size: 10.5px;
+    color: var(--c-primary);
+    margin-top: 6px;
+    opacity: 0.8;
+  }
+
+  /* problem cards */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+  }
+  .problem {
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s;
+    position: relative;
+  }
+  .problem:hover { transform: translateY(-2px); border-color: var(--c-primary); }
+  .problem .num {
+    position: absolute;
+    top: -10px; left: -10px;
+    background: var(--c-primary);
+    color: #fff;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .problem h4 { margin: 0 0 6px; font-size: 14px; color: var(--c-ink); }
+  .problem p { margin: 0; font-size: 12.5px; color: var(--c-muted); }
+
+  /* tables */
+  table.tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 10px 0 6px;
+  }
+  table.tbl th, table.tbl td {
+    border: 1px solid var(--c-border-soft);
+    padding: 7px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.tbl th {
+    background: var(--c-bg);
+    font-weight: 600;
+    color: var(--c-ink);
+  }
+  table.tbl tr.this-work td { background: #eaf4fb; font-weight: 600; color: var(--c-primary-dark); }
+  table.tbl td.centered { text-align: center; }
+
+  /* mechanism cards */
+  .mech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .mech {
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-top: 3px solid var(--c-secondary);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .mech.priority { border-top-color: var(--c-accent-ok); }
+  .mech h4 { margin: 0 0 4px; font-size: 13.5px; color: var(--c-ink); }
+  .mech .m-id {
+    display: inline-block;
+    background: var(--c-bg);
+    color: var(--c-muted);
+    padding: 1px 7px;
+    font-size: 11px;
+    border-radius: 10px;
+    margin-right: 6px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .mech .m-id.ok { background: #dafbe1; color: var(--c-accent-ok); }
+  .mech p.m-desc { margin: 6px 0 6px; font-size: 12.5px; color: var(--c-muted); }
+  .mech .m-gain { font-size: 11.5px; color: var(--c-primary); font-weight: 500; }
+
+  /* topic tree block */
+  .topic-tree {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 6px;
+    padding: 16px 18px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    overflow-x: auto;
+    line-height: 1.7;
+  }
+  .topic-tree .branch { color: #7dd3fc; }
+  .topic-tree .qos { color: #fca5a5; font-size: 11px; }
+  .topic-tree .note { color: #94a3b8; }
+
+  /* chart card */
+  .chart-card {
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    padding: 14px 16px 8px;
+    margin: 10px 0;
+  }
+  .chart-card canvas { max-width: 100%; }
+
+  /* pipeline visual */
+  .pipeline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: stretch;
+    margin: 10px 0 6px;
+  }
+  .pipeline .node {
+    flex: 1 1 130px;
+    background: #fff;
+    border: 1px solid var(--c-primary);
+    border-radius: 6px;
+    padding: 10px 8px;
+    text-align: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .pipeline .node:hover { background: var(--c-abstract); }
+  .pipeline .node b { display: block; color: var(--c-primary-dark); font-size: 13px; margin-bottom: 2px; }
+  .pipeline .node .t { color: var(--c-muted); font-size: 10.5px; }
+  .pipeline .arrow {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--c-primary); font-size: 18px; width: 18px;
+  }
+
+  /* sub contract cards */
+  .sub-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+  }
+  .sub {
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+  .sub h4 { margin: 0 0 4px; font-size: 13.5px; color: var(--c-primary-dark); }
+  .sub code.topic {
+    display: block;
+    background: var(--c-bg);
+    border: 1px solid var(--c-border-soft);
+    padding: 5px 8px;
+    font-size: 11.5px;
+    margin: 6px 0;
+    border-radius: 3px;
+    word-break: break-all;
+  }
+  .sub ul { padding-left: 18px; margin: 6px 0 0; font-size: 12.5px; color: var(--c-ink); }
+  .sub ul li { margin-bottom: 3px; }
+  .sub.recommended { border: 2px solid var(--c-accent-ok); }
+  .sub .rec-tag {
+    display: inline-block;
+    background: var(--c-accent-ok);
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    letter-spacing: 0.4px;
+    margin-left: 4px;
+  }
+
+  /* case study */
+  .case-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 14px;
+  }
+  .case {
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-left: 4px solid var(--c-accent-warn);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+  .case h4 { margin: 0 0 6px; font-size: 14px; color: var(--c-accent-warn); }
+  .case dl { margin: 6px 0; font-size: 12.5px; }
+  .case dt { color: var(--c-muted); font-size: 11px; text-transform: uppercase; margin-top: 6px; letter-spacing: 0.3px; }
+  .case dd { margin: 1px 0 0; color: var(--c-ink); }
+
+  /* manuscript box */
+  #manuscript-content {
+    font-size: 14px;
+    line-height: 1.72;
+    max-height: 580px;
+    overflow-y: auto;
+    padding: 16px 20px;
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    background: #fcfcfd;
+  }
+  #manuscript-content h1 { font-size: 18px; margin-top: 0; }
+  #manuscript-content h2 { font-size: 16px; margin-top: 18px; color: var(--c-primary-dark); }
+  #manuscript-content h3 { font-size: 14px; margin-top: 14px; }
+  #manuscript-content table { font-size: 12.5px; border-collapse: collapse; }
+  #manuscript-content table th, #manuscript-content table td {
+    border: 1px solid var(--c-border-soft); padding: 5px 8px; text-align: left;
+  }
+  #manuscript-content blockquote {
+    border-left: 3px solid var(--c-primary);
+    margin: 10px 0;
+    padding: 6px 14px;
+    color: var(--c-muted);
+    background: var(--c-abstract);
+  }
+  #manuscript-content code {
+    background: var(--c-border-soft);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12.5px;
+  }
+  #manuscript-content pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 10px 14px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 12px;
+  }
+
+  /* download */
+  .dl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .dl {
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.15s;
+  }
+  .dl:hover { border-color: var(--c-primary); }
+  .dl .type {
+    background: var(--c-primary);
+    color: #fff;
+    font-size: 10.5px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.4px;
+    align-self: flex-start;
+    text-transform: uppercase;
+  }
+  .dl.html .type { background: var(--c-accent-warn); }
+  .dl.md .type { background: var(--c-secondary); }
+  .dl.yaml .type { background: var(--c-accent-ok); }
+  .dl.py .type { background: var(--c-accent-danger); }
+  .dl h4 { margin: 0; font-size: 13px; color: var(--c-ink); }
+  .dl p { margin: 0; font-size: 12px; color: var(--c-muted); }
+  .dl a { font-size: 12.5px; font-weight: 600; margin-top: 4px; }
+
+  /* modal */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-backdrop.active { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 10px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px 28px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    position: relative;
+  }
+  .modal h3 { margin-top: 0; color: var(--c-primary-dark); }
+  .modal .close {
+    position: absolute; top: 10px; right: 14px;
+    background: none; border: none; font-size: 22px; color: var(--c-muted); cursor: pointer;
+  }
+  .modal .close:hover { color: var(--c-accent-danger); }
+  .modal pre.math {
+    background: var(--c-bg);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-family: "Latin Modern Math", Cambria, "Times New Roman", serif;
+    overflow-x: auto;
+  }
+
+  /* mermaid area */
+  .mermaid { background: #fff; border-radius: 6px; padding: 10px 6px; text-align: center; overflow-x: auto; }
+
+  footer.fin {
+    text-align: center;
+    padding: 30px 20px 40px;
+    color: var(--c-muted);
+    font-size: 12.5px;
+  }
+  footer.fin a { color: var(--c-primary); }
+</style>
+</head>
+<body>
+
+<!-- ============= BANNER ============= -->
+<div class="banner">
+  <span>
+    <span class="tag">INTERNAL REVIEW</span>
+    Dissertation systems-design review · Not for external distribution
+  </span>
+  <button id="btn-lang" class="lang-toggle" onclick="toggleLang()">🌐 Bahasa Indonesia</button>
+</div>
+
+<!-- ============= HERO ============= -->
+<header class="hero">
+  <h1 data-en="A Hybrid MQTT-Based Inter-Service Architecture for Onsite–Regional Earthquake Early Warning with Blind-Zone Mitigation"
+      data-id="Arsitektur Hybrid Berbasis MQTT untuk Sistem Peringatan Dini Gempa Onsite–Regional dengan Mitigasi Blind-Zone">
+    A Hybrid MQTT-Based Inter-Service Architecture for Onsite–Regional Earthquake Early Warning with Blind-Zone Mitigation
+  </h1>
+  <div class="sub" data-en="Systems design for the Java–Sunda Subduction Zone · extension of the IDA-PTW framework for InaTEWS"
+       data-id="Desain sistem untuk Zona Subduksi Jawa–Sunda · perluasan kerangka IDA-PTW untuk InaTEWS">
+    Systems design for the Java–Sunda Subduction Zone · extension of the IDA-PTW framework for InaTEWS
+  </div>
+  <div class="authors">
+    <b>Hanif Andi Nugraha¹</b>, <b>Dede Djuhana¹˒²</b>, <b>Adhi Harmoko Saputro¹</b>, <b>Sigit Pramono²</b>
+    <br>
+    <span style="font-size:11.5px">¹ Department of Physics, Universitas Indonesia, Depok · ² BMKG, Jakarta</span>
+  </div>
+</header>
+
+<!-- ============= NAV ============= -->
+<nav class="topnav" id="topnav">
+  <a href="#overview" data-en="Overview" data-id="Ringkasan">Overview</a>
+  <a href="#why" data-en="Why This Matters" data-id="Mengapa Penting">Why This Matters</a>
+  <a href="#architecture" data-en="Architecture" data-id="Arsitektur">Architecture</a>
+  <a href="#topics" data-en="Topic Tree & QoS" data-id="Topik & QoS">Topic Tree & QoS</a>
+  <a href="#mechanisms" data-en="Fusion Mechanisms" data-id="Mekanisme Fusi">Fusion Mechanisms</a>
+  <a href="#gap" data-en="Research Gap" data-id="Celah Riset">Research Gap</a>
+  <a href="#latency" data-en="Latency & Accuracy" data-id="Latensi & Akurasi">Latency & Accuracy</a>
+  <a href="#cases" data-en="Case Studies" data-id="Studi Kasus">Case Studies</a>
+  <a href="#subscribers" data-en="Subscribers" data-id="Pelanggan">Subscribers</a>
+  <a href="#manuscript" data-en="Manuscript" data-id="Naskah">Manuscript</a>
+  <a href="#download" data-en="Download" data-id="Unduh">Download</a>
+</nav>
+
+<main>
+
+  <!-- ============================================== -->
+  <!-- 1 · OVERVIEW                                    -->
+  <!-- ============================================== -->
+  <section class="panel" id="overview">
+    <h2 data-en="Overview" data-id="Ringkasan">Overview</h2>
+    <p class="lede"
+       data-en="Seven headline numbers establishing the design envelope. Click a card for a short explanation."
+       data-id="Tujuh angka utama yang menjelaskan amplop desain. Klik kartu untuk penjelasan singkat.">
+      Seven headline numbers establishing the design envelope. Click a card for a short explanation.
+    </p>
+
+    <div class="abstract">
+      <p data-en="Onsite EEWS face three coupled failure modes: (i) a near-field blind zone of ~38 km, (ii) saturation of canonical magnitude proxies above M_w 7, and (iii) dependence on catalog hypocenters that arrive 30–60 s after P-onset. This project introduces a hybrid MQTT-based inter-service architecture that elevates the messaging substrate from an implementation detail to a first-class design contribution. Eight containerised services exchange raw waveforms, engineered features, and retained alerts through an MQTT v5 broker with a formally specified topic tree, QoS differentiation, and ACL model."
+         data-id="EEWS onsite menghadapi tiga kegagalan yang saling berkelindan: (i) blind zone near-field ~38 km, (ii) saturasi parameter magnitudo kanonik di atas M_w 7, dan (iii) ketergantungan pada hiposenter katalog yang datang 30–60 detik setelah onset-P. Proyek ini memperkenalkan arsitektur hybrid berbasis MQTT yang menaikkan substrat messaging dari sekadar detail implementasi menjadi kontribusi desain utama. Delapan service terkontainer berkomunikasi melalui MQTT v5 broker dengan pohon topik formal, diferensiasi QoS, dan model ACL.">
+        Onsite EEWS face three coupled failure modes: (i) a near-field blind zone of ~38 km, (ii) saturation of canonical magnitude proxies above M_w 7, and (iii) dependence on catalog hypocenters that arrive 30–60 s after P-onset. This project introduces a hybrid MQTT-based inter-service architecture that elevates the messaging substrate from an implementation detail to a first-class design contribution. Eight containerised services exchange raw waveforms, engineered features, and retained alerts through an MQTT v5 broker with a formally specified topic tree, QoS differentiation, and ACL model.
+      </p>
+      <p data-en="The architecture reuses the upstream IDA-PTW deep-learning pipeline (R² = 0.729 over 25 058 accelerograms) and adds four messaging-enabled refinement mechanisms. A closed-form latency budget establishes ≤ 780 ms of overhead plus the P-wave observation window, delivering sub-second near-field binary alerts at t ≈ 630 ms from P-onset."
+         data-id="Arsitektur menggunakan kembali pipeline deep-learning IDA-PTW (R² = 0.729 pada 25.058 akselerogram) dan menambahkan empat mekanisme penyempurnaan yang diaktifkan oleh substrat messaging. Anggaran latensi tertutup menghasilkan overhead ≤ 780 ms plus jendela pengamatan P-wave, memberikan alert biner near-field sub-detik pada t ≈ 630 ms dari onset-P.">
+        The architecture reuses the upstream IDA-PTW deep-learning pipeline (R² = 0.729 over 25 058 accelerograms) and adds four messaging-enabled refinement mechanisms. A closed-form latency budget establishes ≤ 780 ms of overhead plus the P-wave observation window, delivering sub-second near-field binary alerts at t ≈ 630 ms from P-onset.
+      </p>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric" onclick="openModal('m-blind')">
+        <div class="value">38 → 4</div>
+        <div class="label" data-en="blind-zone km" data-id="blind-zone km">blind-zone km</div>
+        <div class="hint" data-en="click for detail" data-id="klik untuk detail">click for detail</div>
+      </div>
+      <div class="metric ok" onclick="openModal('m-latency')">
+        <div class="value">630 ms</div>
+        <div class="label" data-en="Stage-0 near-field" data-id="Stage-0 near-field">Stage-0 near-field</div>
+        <div class="hint" data-en="sub-second flag" data-id="flag sub-detik">sub-second flag</div>
+      </div>
+      <div class="metric secondary" onclick="openModal('m-fusion')">
+        <div class="value">0.755 → 0.55</div>
+        <div class="label" data-en="σ_total N=3" data-id="σ_total N=3">σ_total (N=3)</div>
+        <div class="hint" data-en="Bayesian fusion" data-id="fusi Bayes">Bayesian fusion</div>
+      </div>
+      <div class="metric" onclick="openModal('m-r2')">
+        <div class="value">0.729</div>
+        <div class="label" data-en="R² 103 periods" data-id="R² 103 periode">R² (103 periods)</div>
+        <div class="hint" data-en="IDA-PTW baseline" data-id="IDA-PTW baseline">IDA-PTW baseline</div>
+      </div>
+      <div class="metric warn" onclick="openModal('m-recall')">
+        <div class="value">91.1%</div>
+        <div class="label" data-en="Damaging Recall" data-id="Damaging Recall">Damaging Recall</div>
+        <div class="hint" data-en="Stage 1 gate" data-id="Stage 1 gate">Stage 1 gate</div>
+      </div>
+      <div class="metric" onclick="openModal('m-topics')">
+        <div class="value">8</div>
+        <div class="label" data-en="MQTT topic classes" data-id="Kelas topik MQTT">MQTT topic classes</div>
+        <div class="hint" data-en="QoS 0/1/2" data-id="QoS 0/1/2">QoS 0/1/2</div>
+      </div>
+      <div class="metric secondary" onclick="openModal('m-sites')">
+        <div class="value">5</div>
+        <div class="label" data-en="ADRs documented" data-id="ADR terdokumentasi">ADRs documented</div>
+        <div class="hint" data-en="design decisions" data-id="keputusan desain">design decisions</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- 2 · WHY THIS MATTERS                           -->
+  <!-- ============================================== -->
+  <section class="panel" id="why">
+    <h2 data-en="Why This Matters" data-id="Mengapa Ini Penting">Why This Matters</h2>
+    <p class="lede"
+       data-en="Four structural problems that the existing onsite EEWS paradigm cannot fully resolve on its own. Each card summarises one problem in under ten lines."
+       data-id="Empat masalah struktural yang tidak dapat diselesaikan sepenuhnya oleh paradigma EEWS onsite sendiri. Setiap kartu merangkum satu masalah dalam kurang dari sepuluh baris.">
+      Four structural problems that the existing onsite EEWS paradigm cannot fully resolve on its own. Each card summarises one problem in under ten lines.
+    </p>
+
+    <div class="problem-grid">
+      <div class="problem" onclick="openModal('p-blind')">
+        <span class="num">1</span>
+        <h4 data-en="Near-field blind zone" data-id="Blind zone near-field">Near-field blind zone</h4>
+        <p data-en="The P–S travel-time difference within ~38 km is insufficient for a 3 s observation window plus 2 s dissemination — the events most lethal to dense cities like Bandung and Jakarta sit inside this gap."
+           data-id="Selisih waktu tempuh P–S dalam ~38 km tidak cukup untuk jendela pengamatan 3 detik plus diseminasi 2 detik — peristiwa paling mematikan di kota padat seperti Bandung dan Jakarta justru berada di celah ini.">
+          The P–S travel-time difference within ~38 km is insufficient for a 3 s observation window plus 2 s dissemination — the events most lethal to dense cities like Bandung and Jakarta sit inside this gap.
+        </p>
+      </div>
+      <div class="problem" onclick="openModal('p-satur')">
+        <span class="num">2</span>
+        <h4 data-en="Parameter saturation" data-id="Saturasi parameter">Parameter saturation</h4>
+        <p data-en="τ_c and P_d saturate above M_w 7: the 3 s window sees only the rupture nucleation phase. The 2011 Tohoku-Oki event settled this debate — its initial P coda showed no feature predicting the M_w 9.0 outcome."
+           data-id="τ_c dan P_d saturasi di atas M_w 7: jendela 3 detik hanya menangkap fase nukleasi rupture. Peristiwa Tohoku-Oki 2011 menutup perdebatan ini — coda-P awalnya tidak menunjukkan fitur yang memprediksi M_w 9.0.">
+          τ_c and P_d saturate above M_w 7: the 3 s window sees only the rupture nucleation phase. The 2011 Tohoku-Oki event settled this debate — its initial P coda showed no feature predicting the M_w 9.0 outcome.
+        </p>
+      </div>
+      <div class="problem" onclick="openModal('p-catalog')">
+        <span class="num">3</span>
+        <h4 data-en="Catalog dependence" data-id="Ketergantungan katalog">Catalog dependence</h4>
+        <p data-en="Classical onsite regressors need a catalog hypocenter (latency 30–60 s). IDA-PTW Stage 1.5 removes this by auto-regressing distance from the P-wave at 99.87 % fidelity — but the catalog-free guarantee must be preserved end-to-end."
+           data-id="Regresor onsite klasik memerlukan hiposenter katalog (latensi 30–60 detik). Stage 1.5 IDA-PTW menghilangkannya dengan meregresi jarak dari P-wave pada fidelitas 99.87 % — tapi jaminan tanpa-katalog harus dipertahankan end-to-end.">
+          Classical onsite regressors need a catalog hypocenter (latency 30–60 s). IDA-PTW Stage 1.5 removes this by auto-regressing distance from the P-wave at 99.87 % fidelity — but the catalog-free guarantee must be preserved end-to-end.
+        </p>
+      </div>
+      <div class="problem" onclick="openModal('p-bandwidth')">
+        <span class="num">4</span>
+        <h4 data-en="Subscriber bandwidth" data-id="Bandwidth pelanggan">Subscriber bandwidth</h4>
+        <p data-en="A 103-period Sa(T) vector is overkill for a building whose fundamental period is a single value. Naïvely fanning the full vector to 50 000 buildings in Jakarta wastes bandwidth and pushes correction logic onto every edge agent."
+           data-id="Vektor Sa(T) 103 periode berlebihan untuk gedung yang periode fundamentalnya hanya satu nilai. Menyebarkan vektor lengkap ke 50.000 gedung di Jakarta memboroskan bandwidth dan membebankan logika koreksi ke setiap agen edge.">
+          A 103-period Sa(T) vector is overkill for a building whose fundamental period is a single value. Naïvely fanning the full vector to 50 000 buildings in Jakarta wastes bandwidth and pushes correction logic onto every edge agent.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- 3 · ARCHITECTURE                                -->
+  <!-- ============================================== -->
+  <section class="panel" id="architecture">
+    <h2 data-en="Architecture" data-id="Arsitektur">Architecture</h2>
+    <p class="lede"
+       data-en="Eight services decoupled by MQTT topics. Click a stage to see its responsibility."
+       data-id="Delapan service yang dipisahkan oleh topik MQTT. Klik tahap untuk melihat tanggung jawabnya.">
+      Eight services decoupled by MQTT topics. Click a stage to see its responsibility.
+    </p>
+
+    <div class="pipeline">
+      <div class="node" onclick="openModal('s-bridge')"><b>bridge</b><span class="t">SeedLink → MQTT</span></div>
+      <div class="arrow">→</div>
+      <div class="node" onclick="openModal('s-urpd')"><b>Stage 0</b><span class="t">URPD 0.5 s</span></div>
+      <div class="arrow">→</div>
+      <div class="node" onclick="openModal('s-feat')"><b>features</b><span class="t">8 physics feats</span></div>
+      <div class="arrow">→</div>
+      <div class="node" onclick="openModal('s-gate')"><b>Stage 1</b><span class="t">intensity gate</span></div>
+      <div class="arrow">→</div>
+      <div class="node" onclick="openModal('s-dluhs2')"><b>Stage 2</b><span class="t">DLUHS2 Sa(T)</span></div>
+      <div class="arrow">→</div>
+      <div class="node" onclick="openModal('s-fusion')"><b>fusion</b><span class="t">Bayesian</span></div>
+      <div class="arrow">→</div>
+      <div class="node" onclick="openModal('s-projector')"><b>projector</b><span class="t">per-site</span></div>
+    </div>
+
+    <h3 data-en="Container diagram" data-id="Diagram container">Container diagram</h3>
+    <pre class="mermaid">
+flowchart LR
+  classDef src fill:#fff4e6,stroke:#cc6a1f,color:#5a2d00
+  classDef svc fill:#eaf4fb,stroke:#0b6e99,color:#003a55
+  classDef bus fill:#fdf5d3,stroke:#b08800,color:#3a2a00
+  classDef sink fill:#eaf7ee,stroke:#2f8a4a,color:#133e21
+  classDef edge fill:#f4ecfa,stroke:#6d35a8,color:#2f1056
+
+  SL["BMKG SeedLink"]:::src
+  BR["bridge"]:::svc
+  MQ["MQTT v5 broker"]:::bus
+  F["features"]:::svc
+  U0["urpd stage0"]:::svc
+  G1["gate stage1"]:::svc
+  S2["dluhs2 stage2"]:::svc
+  FU["fusion"]:::svc
+  SP["site projector"]:::edge
+  C1["per-site edge agents"]:::sink
+  C4["dashboard + SCADA"]:::sink
+
+  SL --> BR --> MQ
+  MQ --> F
+  MQ --> U0
+  F  --> G1
+  F  --> S2
+  G1 --> S2
+  U0 --> FU
+  G1 --> FU
+  S2 --> FU
+  FU --> MQ
+  MQ --> SP
+  SP --> MQ
+  MQ --> C1
+  MQ --> C4
+    </pre>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- 4 · TOPIC TREE & QoS                            -->
+  <!-- ============================================== -->
+  <section class="panel" id="topics">
+    <h2 data-en="MQTT Topic Tree & QoS" data-id="Pohon Topik & QoS MQTT">MQTT Topic Tree & QoS</h2>
+    <p class="lede"
+       data-en="Eight topic classes under eews/v1/. Retention is granted ONLY to alert and alert_site, so late joiners see the current state without a replay system."
+       data-id="Delapan kelas topik di bawah eews/v1/. Retensi HANYA diberikan pada alert dan alert_site sehingga subscriber yang bergabung terlambat langsung melihat state terkini tanpa sistem replay.">
+      Eight topic classes under <code>eews/v1/</code>. Retention is granted ONLY to alert and alert_site, so late joiners see the current state without a replay system.
+    </p>
+
+    <div class="topic-tree">
+<span class="branch">eews/v1/</span>
+├── raw/{net}/{sta}/{cha}              <span class="qos">QoS 1 · retained=false</span>
+├── feat/{net}/{sta}/{window_s}        <span class="qos">QoS 1 · retained=false</span>
+├── pred/
+│   ├── urpd/{net}/{sta}               <span class="qos">QoS 1 · retained=false</span>
+│   ├── gate/{net}/{sta}               <span class="qos">QoS 1 · retained=false</span>
+│   └── psa/{net}/{sta}                <span class="qos">QoS 1 · retained=false</span>
+├── alert/{region}/{event_id}          <span class="qos">QoS 2 · retained=true</span>
+├── alert_site/{site_id}               <span class="qos">QoS 2 · retained=true</span>
+└── health/{service}                   <span class="qos">QoS 0 · retained=true</span>
+
+<span class="note"># ACL sketch</span>
+<span class="note">bridge       publishes raw/#;  subscribes —</span>
+<span class="note">features     publishes feat/#; subscribes raw/#</span>
+<span class="note">inference/*  publishes pred/*; subscribes raw/#, feat/#, pred/gate/#</span>
+<span class="note">fusion       publishes alert/#; subscribes pred/#</span>
+<span class="note">projector    publishes alert_site/#; subscribes alert/#</span>
+    </div>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- 5 · FUSION MECHANISMS                           -->
+  <!-- ============================================== -->
+  <section class="panel" id="mechanisms">
+    <h2 data-en="Fusion & Refinement Mechanisms" data-id="Mekanisme Fusi & Penyempurnaan">Fusion & Refinement Mechanisms</h2>
+    <p class="lede"
+       data-en="Four mechanisms enabled by the messaging substrate that raise accuracy beyond single-station onsite inference. Green cards are the highest priority — they attack the dominant φ variance component."
+       data-id="Empat mekanisme yang diaktifkan substrat messaging untuk menaikkan akurasi di atas inferensi onsite stasiun tunggal. Kartu hijau = prioritas tertinggi (menyerang komponen φ yang dominan).">
+      Four mechanisms enabled by the messaging substrate that raise accuracy beyond single-station onsite inference. Green cards are the highest priority — they attack the dominant φ variance component.
+    </p>
+
+    <div class="mech-grid">
+      <div class="mech priority" onclick="openModal('mech-m1')">
+        <span class="m-id ok">M1</span>
+        <h4 data-en="Multi-station Bayesian fusion" data-id="Fusi Bayes multi-stasiun">Multi-station Bayesian fusion</h4>
+        <p class="m-desc"
+           data-en="Inverse-variance weighted mean of log10 Sa(T) across N co-triggering stations."
+           data-id="Rerata terbobot inverse-variance dari log10 Sa(T) lintas N stasiun ko-trigger.">
+          Inverse-variance weighted mean of log10 Sa(T) across N co-triggering stations.
+        </p>
+        <span class="m-gain">σ → 0.55 for N = 3</span>
+      </div>
+
+      <div class="mech" onclick="openModal('mech-m2')">
+        <span class="m-id">M2</span>
+        <h4 data-en="Progressive alert revision" data-id="Revisi alert progresif">Progressive alert revision</h4>
+        <p class="m-desc"
+           data-en="Publish at t_P + 3, 5, 8 s with the same event_id and monotonically increasing revision."
+           data-id="Publikasi pada t_P + 3, 5, 8 detik dengan event_id yang sama dan revision yang naik monoton.">
+          Publish at t_P + 3, 5, 8 s with the same event_id and monotonically increasing revision.
+        </p>
+        <span class="m-gain">+0.5% R² per additional second</span>
+      </div>
+
+      <div class="mech priority" onclick="openModal('mech-m3')">
+        <span class="m-id ok">M3</span>
+        <h4 data-en="Edge site projection" data-id="Proyeksi site di edge">Edge site projection</h4>
+        <p class="m-desc"
+           data-en="ADR-0005 projector applies Δ_Vs30 + Δ_dist + Δ_HV per site and emits a single Sa(T₁) per event."
+           data-id="Projector ADR-0005 menerapkan Δ_Vs30 + Δ_dist + Δ_HV per site lalu mengeluarkan satu Sa(T₁) per kejadian.">
+          ADR-0005 projector applies Δ_Vs30 + Δ_dist + Δ_HV per site and emits a single Sa(T₁) per event.
+        </p>
+        <span class="m-gain" data-en="attacks φ directly" data-id="menyerang φ langsung">attacks φ directly</span>
+      </div>
+
+      <div class="mech priority" onclick="openModal('mech-m4')">
+        <span class="m-id ok">M4</span>
+        <h4 data-en="Ensemble hypocenter" data-id="Ensemble hiposenter">Ensemble hypocenter</h4>
+        <p class="m-desc"
+           data-en="Grid-search localisation from ≥ 3 Stage-1.5 distance regressor outputs sharpens log10(dist) input."
+           data-id="Lokalisasi grid-search dari ≥ 3 output regresor jarak Stage 1.5 mempertajam input log10(dist).">
+          Grid-search localisation from ≥ 3 Stage-1.5 distance regressor outputs sharpens log10(dist) input.
+        </p>
+        <span class="m-gain">+1–2% R² expected</span>
+      </div>
+
+      <div class="mech" onclick="openModal('mech-m5')">
+        <span class="m-id">M5</span>
+        <h4 data-en="Spectrogram 2D branch" data-id="Cabang spektrogram 2D">Spectrogram 2D branch</h4>
+        <p class="m-desc"
+           data-en="Parallel multi-scale STFT CNN fused linearly with the 1-D DLUHS2 backbone (Münchmeyer 2025 precedent)."
+           data-id="CNN STFT multi-skala paralel difusi linear dengan backbone 1-D DLUHS2 (preseden Münchmeyer 2025).">
+          Parallel multi-scale STFT CNN fused linearly with the 1-D DLUHS2 backbone (Münchmeyer 2025 precedent).
+        </p>
+        <span class="m-gain">+3–5% R²</span>
+      </div>
+
+      <div class="mech" onclick="openModal('mech-m6')">
+        <span class="m-id">M6</span>
+        <h4 data-en="Physics-guided loss" data-id="Loss yang dipandu fisika">Physics-guided loss</h4>
+        <p class="m-desc"
+           data-en="Penalise predictions that exceed Abrahamson 2014 GMPE ± 2σ; use SHAP for feature re-weighting."
+           data-id="Penalti untuk prediksi yang melampaui GMPE Abrahamson 2014 ± 2σ; SHAP untuk pembobotan ulang fitur.">
+          Penalise predictions that exceed Abrahamson 2014 GMPE ± 2σ; use SHAP for feature re-weighting.
+        </p>
+        <span class="m-gain" data-en="tighter p16/p84" data-id="p16/p84 lebih ketat">tighter p16/p84</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- 6 · RESEARCH GAP                                -->
+  <!-- ============================================== -->
+  <section class="panel" id="gap">
+    <h2 data-en="Research Gap Analysis" data-id="Analisis Celah Riset">Research Gap Analysis</h2>
+    <p class="lede"
+       data-en="A focused literature survey (April 2026) found no peer-reviewed paper jointly treating (A) MQTT, (B) hybrid onsite-regional, and (C) blind-zone mitigation. Seven candidates reach only two of three."
+       data-id="Survei literatur terfokus (April 2026) menemukan belum ada paper peer-reviewed yang menggabungkan (A) MQTT, (B) hybrid onsite-regional, dan (C) mitigasi blind-zone. Tujuh kandidat hanya memenuhi dua dari tiga.">
+      A focused literature survey (April 2026) found no peer-reviewed paper jointly treating <b>(A) MQTT</b>, <b>(B) hybrid onsite-regional</b>, and <b>(C) blind-zone mitigation</b>. Seven candidates reach only two of three.
+    </p>
+
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Reference</th>
+          <th>Year</th>
+          <th>Venue</th>
+          <th class="centered">A · MQTT</th>
+          <th class="centered">B · Hybrid</th>
+          <th class="centered">C · Blind-zone</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Pierleoni et al.</td><td>2023</td><td>Sensors</td><td class="centered">✓</td><td class="centered">✓</td><td class="centered">—</td></tr>
+        <tr><td>Wu et al. · P-Alert</td><td>2022</td><td>Geoscience Letters</td><td class="centered">—</td><td class="centered">✓</td><td class="centered">✓</td></tr>
+        <tr><td>Yang, Mittal & Wu</td><td>2023</td><td>TAO</td><td class="centered">—</td><td class="centered">✓</td><td class="centered">✓</td></tr>
+        <tr><td>Manzano et al.</td><td>2017</td><td>FGCS</td><td class="centered">✓</td><td class="centered">◐</td><td class="centered">—</td></tr>
+        <tr><td>Tuli et al.</td><td>2021</td><td>ACM TECS</td><td class="centered">✓</td><td class="centered">—</td><td class="centered">—</td></tr>
+        <tr><td>Ruiz-Pinillos et al.</td><td>2025</td><td>Commun. Earth Environ.</td><td class="centered">✓</td><td class="centered">—</td><td class="centered">—</td></tr>
+        <tr><td>Cianciaruso et al.</td><td>2022</td><td>Information</td><td class="centered">✓</td><td class="centered">—</td><td class="centered">—</td></tr>
+        <tr class="this-work"><td><b>This work</b></td><td>2026</td><td>IEEE IoTJ (target)</td><td class="centered">✓</td><td class="centered">✓</td><td class="centered">✓</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--c-muted);margin-top:10px"
+       data-en="The gap is a framing gap rather than a feasibility gap: MQTT is usually treated as an implementation detail, and P-Alert's messaging substrate is not reported in peer-reviewed form. This work elevates the substrate to a research contribution."
+       data-id="Celah ini adalah celah framing, bukan kelayakan: MQTT biasanya dianggap detail implementasi, dan substrat messaging P-Alert tidak dilaporkan peer-reviewed. Riset ini mengangkat substrat menjadi kontribusi ilmiah.">
+      The gap is a framing gap rather than a feasibility gap: MQTT is usually treated as an implementation detail, and P-Alert's messaging substrate is not reported in peer-reviewed form. This work elevates the substrate to a research contribution.
+    </p>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- 7 · LATENCY & ACCURACY                          -->
+  <!-- ============================================== -->
+  <section class="panel" id="latency">
+    <h2 data-en="Latency Budget & Accuracy Projection" data-id="Anggaran Latensi & Proyeksi Akurasi">Latency Budget & Accuracy Projection</h2>
+    <p class="lede"
+       data-en="Two quantitative views. The bar chart breaks the 780 ms overhead into its constituent service budgets. The line chart projects σ_total and R² as fusion mechanisms are added."
+       data-id="Dua tampilan kuantitatif. Bar chart menguraikan overhead 780 ms menjadi anggaran per-service. Line chart memproyeksikan σ_total dan R² saat mekanisme fusi ditambahkan.">
+      Two quantitative views. The bar chart breaks the 780 ms overhead into its constituent service budgets. The line chart projects σ_total and R² as fusion mechanisms are added.
+    </p>
+
+    <div class="chart-card">
+      <canvas id="chart-latency" height="170"></canvas>
+    </div>
+    <div class="chart-card">
+      <canvas id="chart-accuracy" height="170"></canvas>
+    </div>
+
+    <p style="font-size:12.5px;color:var(--c-muted);margin-top:6px"
+       data-en="Wall-clock to first alert at PTW 3 s is 780 ms overhead + 3 000 ms window = 3.78 s. The Stage-0 near-field binary flag reaches subscribers in ~630 ms without the full PTW wait."
+       data-id="Wall-clock ke alert pertama pada PTW 3 detik adalah 780 ms overhead + 3.000 ms jendela = 3,78 detik. Flag biner near-field Stage-0 mencapai subscriber dalam ~630 ms tanpa menunggu PTW penuh.">
+      Wall-clock to first alert at PTW 3 s is 780 ms overhead + 3 000 ms window = 3.78 s. The Stage-0 near-field binary flag reaches subscribers in ~630 ms without the full PTW wait.
+    </p>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- 8 · CASE STUDIES                                -->
+  <!-- ============================================== -->
+  <section class="panel" id="cases">
+    <h2 data-en="Retrospective Case Studies" data-id="Studi Kasus Retrospektif">Retrospective Case Studies</h2>
+    <p class="lede"
+       data-en="Two recent West Java events that sit inside the near-field blind zone of the InaTEWS pilot network."
+       data-id="Dua kejadian Jawa Barat terbaru yang berada di dalam blind zone near-field pilot InaTEWS.">
+      Two recent West Java events that sit inside the near-field blind zone of the InaTEWS pilot network.
+    </p>
+
+    <div class="case-grid">
+      <div class="case">
+        <h4>Cianjur · 21 November 2022</h4>
+        <dl>
+          <dt data-en="Moment magnitude" data-id="Magnitudo momen">Moment magnitude</dt><dd>M_w 5.6</dd>
+          <dt data-en="Hypocenter" data-id="Hiposenter">Hypocenter</dt><dd>−6.86°, 107.05°, depth 10 km</dd>
+          <dt data-en="Nearest stations" data-id="Stasiun terdekat">Nearest stations</dt><dd>CMJI, JAGI, BJI (IA network)</dd>
+          <dt data-en="Expected Stage-0 flag" data-id="Expected Stage-0 flag">Expected Stage-0 flag</dt><dd>t_P + 0.63 s · p_prob ≈ 0.97</dd>
+          <dt data-en="Fused Sa(T = 0.3 s)" data-id="Sa(T = 0.3 s) terfusi">Fused Sa(T = 0.3 s)</dt><dd>0.18 g · p16/p84 [0.13, 0.25] g</dd>
+          <dt data-en="Narrative" data-id="Narasi">Narrative</dt>
+          <dd data-en="The near-field hypocentre is inside the 11 km human-protection radius. Stage-0 binary alert enables building shutdown before Stage-2 completes."
+              data-id="Hiposenter near-field berada dalam radius perlindungan manusia 11 km. Alert biner Stage-0 memungkinkan shutdown gedung sebelum Stage-2 selesai.">
+            The near-field hypocentre is inside the 11 km human-protection radius. Stage-0 binary alert enables building shutdown before Stage-2 completes.
+          </dd>
+        </dl>
+      </div>
+
+      <div class="case">
+        <h4>Sumedang · 1 January 2024</h4>
+        <dl>
+          <dt data-en="Moment magnitude" data-id="Magnitudo momen">Moment magnitude</dt><dd>M_w 5.7</dd>
+          <dt data-en="Hypocenter" data-id="Hiposenter">Hypocenter</dt><dd>−6.88°, 107.92°, depth 5 km</dd>
+          <dt data-en="Nearest stations" data-id="Stasiun terdekat">Nearest stations</dt><dd>CMJI, PSJI (IA network)</dd>
+          <dt data-en="Expected Stage-0 flag" data-id="Expected Stage-0 flag">Expected Stage-0 flag</dt><dd>t_P + 0.63 s · p_prob ≈ 0.97</dd>
+          <dt data-en="Fused Sa(T = 0.3 s)" data-id="Sa(T = 0.3 s) terfusi">Fused Sa(T = 0.3 s)</dt><dd>0.15 g · p16/p84 [0.10, 0.22] g</dd>
+          <dt data-en="Narrative" data-id="Narasi">Narrative</dt>
+          <dd data-en="Shallow near-field strike-slip. Degraded-mode alert (ADR-0004) exercised: Stage 2 reload race is survived by the retained Stage-0 alert at 630 ms."
+              data-id="Strike-slip dangkal near-field. Alert mode-terdegradasi (ADR-0004) diuji: race reload Stage 2 ditanggung oleh alert Stage-0 yang retained pada 630 ms.">
+            Shallow near-field strike-slip. Degraded-mode alert (ADR-0004) exercised: Stage 2 reload race is survived by the retained Stage-0 alert at 630 ms.
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- 9 · SUBSCRIBERS                                 -->
+  <!-- ============================================== -->
+  <section class="panel" id="subscribers">
+    <h2 data-en="Subscriber Contract Per Site" data-id="Kontrak Pelanggan per Site">Subscriber Contract Per Site</h2>
+    <p class="lede"
+       data-en="Three subscription patterns. Recommended default for operational sites is per-site projection (ADR-0005)."
+       data-id="Tiga pola pelanggan. Default yang direkomendasikan untuk site operasional adalah proyeksi per-site (ADR-0005).">
+      Three subscription patterns. Recommended default for operational sites is per-site projection (ADR-0005).
+    </p>
+
+    <div class="sub-grid">
+      <div class="sub">
+        <h4 data-en="Near-field only" data-id="Hanya near-field">Near-field only</h4>
+        <code class="topic">eews/v1/pred/urpd/IA/CMJI</code>
+        <p style="font-size:12.5px;margin:0;color:var(--c-muted)"
+           data-en="Minimum payload for life-safety shutdown in sub-second budget."
+           data-id="Payload minimum untuk shutdown keselamatan jiwa dalam anggaran sub-detik.">
+          Minimum payload for life-safety shutdown in sub-second budget.
+        </p>
+        <ul>
+          <li><code>p_prob</code>, <code>near_field_flag</code></li>
+          <li><code>spectral_centroid_hz</code></li>
+          <li>Latency budget ≈ 630 ms</li>
+        </ul>
+      </div>
+
+      <div class="sub">
+        <h4 data-en="Full-spectrum analyst" data-id="Analis spektrum penuh">Full-spectrum analyst</h4>
+        <code class="topic">eews/v1/alert/jawa_barat/+</code>
+        <p style="font-size:12.5px;margin:0;color:var(--c-muted)"
+           data-en="Whole 103-period vector with fused uncertainty bounds — for regional dashboards and SCADA."
+           data-id="Seluruh vektor 103 periode dengan batas ketidakpastian terfusi — untuk dashboard regional dan SCADA.">
+          Whole 103-period vector with fused uncertainty bounds — for regional dashboards and SCADA.
+        </p>
+        <ul>
+          <li>103-period log10 Sa(T)</li>
+          <li>p16 / p84 bounds (M1)</li>
+          <li><code>revision</code>, <code>ptw_s</code> (M2)</li>
+          <li>SNI-1726:2019 category</li>
+        </ul>
+      </div>
+
+      <div class="sub recommended">
+        <h4>
+          <span data-en="Operational building" data-id="Gedung operasional">Operational building</span>
+          <span class="rec-tag" data-en="RECOMMENDED" data-id="DIREKOMENDASIKAN">RECOMMENDED</span>
+        </h4>
+        <code class="topic">eews/v1/alert_site/UI-FT-B</code>
+        <p style="font-size:12.5px;margin:0;color:var(--c-muted)"
+           data-en="Single Sa(T₁) number per event revision, already site-corrected. Minimum bandwidth at the edge."
+           data-id="Satu nilai Sa(T₁) per revisi kejadian, sudah terkoreksi site. Bandwidth minimum di edge.">
+          Single Sa(T₁) number per event revision, already site-corrected. Minimum bandwidth at the edge.
+        </p>
+        <ul>
+          <li>Sa(T₁) as a single g-unit scalar</li>
+          <li>p16 / p84 at T₁</li>
+          <li>Δ_Vs30, Δ_dist, Δ_HV applied</li>
+          <li><code>nearest_station</code> provenance</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- 10 · MANUSCRIPT                                 -->
+  <!-- ============================================== -->
+  <section class="panel" id="manuscript">
+    <h2 data-en="Manuscript Preview" data-id="Pratinjau Naskah">Manuscript Preview</h2>
+    <p class="lede"
+       data-en="Target venue: IEEE Internet of Things Journal. Systems/architecture paper, ~7 100 words body, 40 references. Embedded below is the front matter and Section I; the full draft is linked in the Download panel."
+       data-id="Target venue: IEEE Internet of Things Journal. Paper sistem/arsitektur, body ~7.100 kata, 40 referensi. Di bawah ini tertanam front matter dan Seksi I; draf lengkap tersedia di panel Unduh.">
+      Target venue: IEEE Internet of Things Journal. Systems/architecture paper, ~7 100 words body, 40 references. Embedded below is the front matter and Section I; the full draft is linked in the Download panel.
+    </p>
+    <div id="manuscript-content">Loading…</div>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- 11 · DOWNLOAD                                   -->
+  <!-- ============================================== -->
+  <section class="panel" id="download">
+    <h2 data-en="Download & Explore" data-id="Unduh & Telusuri">Download & Explore</h2>
+    <p class="lede"
+       data-en="All artefacts produced during this dissertation session, linked via the local workspace."
+       data-id="Semua artefak yang dihasilkan dalam sesi disertasi ini, terhubung melalui workspace lokal.">
+      All artefacts produced during this dissertation session, linked via the local workspace.
+    </p>
+
+    <div class="dl-grid">
+      <div class="dl md">
+        <span class="type">manuscript</span>
+        <h4>IEEE IoTJ draft</h4>
+        <p data-en="Full 7 100-word submission draft" data-id="Draf submisi lengkap 7.100 kata">Full 7 100-word submission draft</p>
+        <a href="manuscript.md">manuscript_ieee_iotj.md →</a>
+      </div>
+      <div class="dl md">
+        <span class="type">architecture</span>
+        <h4>Architecture & ADR log</h4>
+        <p data-en="C4 view, 5 ADRs, accuracy plan" data-id="Tampilan C4, 5 ADR, rencana akurasi">C4 view, 5 ADRs, accuracy plan</p>
+        <a href="architecture.md">architecture.md →</a>
+      </div>
+      <div class="dl md">
+        <span class="type">topic schema</span>
+        <h4>MQTT topic reference</h4>
+        <p data-en="Topic tree, QoS, payload JSON" data-id="Pohon topik, QoS, payload JSON">Topic tree, QoS, payload JSON</p>
+        <a href="mqtt_topic_schema.md">mqtt_topic_schema.md →</a>
+      </div>
+      <div class="dl md">
+        <span class="type">literature</span>
+        <h4>Scopus literature review</h4>
+        <p data-en="Topics 1–4 + research-gap table" data-id="Topik 1–4 + tabel celah riset">Topics 1–4 + research-gap table</p>
+        <a href="literature_review.md">literature_review.md →</a>
+      </div>
+      <div class="dl html">
+        <span class="type">diagram</span>
+        <h4>Mermaid diagrams</h4>
+        <p data-en="Six architecture views" data-id="Enam tampilan arsitektur">Six architecture views</p>
+        <a href="architecture_diagrams.html">architecture_diagrams.html →</a>
+      </div>
+      <div class="dl html">
+        <span class="type">PR review</span>
+        <h4>GitHub-style code review</h4>
+        <p data-en="PR #1 with 8 review threads" data-id="PR #1 dengan 8 thread review">PR #1 with 8 review threads</p>
+        <a href="github_pr_review.html">github_pr_review.html →</a>
+      </div>
+      <div class="dl py">
+        <span class="type">code</span>
+        <h4>Pydantic message contracts</h4>
+        <p data-en="Envelope + 7 payload types" data-id="Envelope + 7 tipe payload">Envelope + 7 payload types</p>
+        <a href="schemas.py">src/common/schemas.py →</a>
+      </div>
+      <div class="dl yaml">
+        <span class="type">config</span>
+        <h4>Default YAML config</h4>
+        <p data-en="Broker, ingest, inference, fusion" data-id="Broker, ingest, inference, fusion">Broker, ingest, inference, fusion</p>
+        <a href="default.yaml">configs/default.yaml →</a>
+      </div>
+      <div class="dl yaml">
+        <span class="type">sites</span>
+        <h4>Site registry</h4>
+        <p data-en="UI, BMKG Ops, Jembatan Cikubang" data-id="UI, BMKG Ops, Jembatan Cikubang">UI, BMKG Ops, Jembatan Cikubang</p>
+        <a href="sites.yaml">configs/sites.yaml →</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="fin">
+  <div data-en="Universitas Indonesia × BMKG · EEWS research · 2026. This page is part of the internal dissertation review for the Hybrid MQTT-Based Regional EEWS extension of the IDA-PTW framework."
+       data-id="Universitas Indonesia × BMKG · Riset EEWS · 2026. Halaman ini bagian dari review internal disertasi untuk perluasan Hybrid MQTT-Based Regional EEWS dari kerangka IDA-PTW.">
+    Universitas Indonesia × BMKG · EEWS research · 2026.
+  </div>
+  <div style="margin-top:6px;font-size:11.5px">
+    Corresponding author: <a href="mailto:hanif.andi@ui.ac.id">hanif.andi@ui.ac.id</a>
+  </div>
+</footer>
+
+<!-- ============= MODAL ============= -->
+<div class="modal-backdrop" id="modal-bd" onclick="closeModal(event)">
+  <div class="modal" id="modal" onclick="event.stopPropagation()">
+    <button class="close" onclick="closeModal()">×</button>
+    <h3 id="modal-title">Detail</h3>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ============== BILINGUAL TOGGLE ==============
+let currentLang = "en";
+const langBtn = document.getElementById("btn-lang");
+function toggleLang() {
+  currentLang = currentLang === "en" ? "id" : "en";
+  langBtn.textContent = currentLang === "en" ? "🌐 Bahasa Indonesia" : "🌐 English";
+  document.querySelectorAll("[data-en]").forEach((el) => {
+    const txt = el.getAttribute("data-" + currentLang);
+    if (txt !== null) {
+      // Preserve inline HTML children
+      if (el.children.length === 0) el.textContent = txt;
+      else {
+        // Replace text nodes only
+        for (let n of el.childNodes) {
+          if (n.nodeType === 3) { n.textContent = txt; return; }
+        }
+        el.innerHTML = txt;
+      }
+    }
+  });
+  renderManuscript();
+}
+
+// ============== NAV SCROLL SPY ==============
+const navLinks = document.querySelectorAll("nav.topnav a");
+const sections = Array.from(navLinks).map((a) => document.querySelector(a.getAttribute("href")));
+function updateActiveNav() {
+  const y = window.scrollY + 130;
+  let activeIdx = 0;
+  sections.forEach((s, i) => { if (s && s.offsetTop <= y) activeIdx = i; });
+  navLinks.forEach((a, i) => a.classList.toggle("active", i === activeIdx));
+}
+window.addEventListener("scroll", updateActiveNav);
+window.addEventListener("DOMContentLoaded", updateActiveNav);
+
+// ============== MODAL ==============
+const modalBd = document.getElementById("modal-bd");
+const modalTitle = document.getElementById("modal-title");
+const modalBody = document.getElementById("modal-body");
+
+const modalData = {
+  "m-blind":     { t: "Blind-zone reduction",
+                   en: "Baseline onsite EEWS blind radius is <b>38 km</b> from (W + Δ)·V_P·V_S/(V_P − V_S) with W = 3 s, Δ = 2 s. Shrinking W to Stage-0 0.5 s and Δ to 0.13 s reduces the blind radius to <b>~5 km</b>, matching the 4 km infrastructure and 11 km human-protection figures after safety margin.",
+                   id: "Radius blind onsite EEWS baseline adalah <b>38 km</b> dari (W + Δ)·V_P·V_S/(V_P − V_S) dengan W = 3 s, Δ = 2 s. Memperkecil W ke Stage-0 0,5 s dan Δ ke 0,13 s menurunkan radius blind ke <b>~5 km</b>, sesuai angka 4 km infrastruktur dan 11 km perlindungan manusia setelah margin keamanan." },
+  "m-latency":   { t: "Stage-0 sub-second latency",
+                   en: "Stage-0 URPD fires on a 0.5 s window with a Gradient-Boosting classifier trained on 7 spectral features (AUC = 0.988). Total path: 50 ms SeedLink → broker + 20 ms fan-out + 80 ms classifier + 50 ms fusion publish + 500 ms window = <b>~630 ms</b>.",
+                   id: "URPD Stage-0 menyala pada jendela 0,5 s dengan klasifikasi Gradient-Boosting yang dilatih pada 7 fitur spektral (AUC = 0,988). Total jalur: 50 ms SeedLink → broker + 20 ms fan-out + 80 ms klasifikasi + 50 ms publish fusion + 500 ms jendela = <b>~630 ms</b>." },
+  "m-fusion":    { t: "Bayesian fusion & sigma",
+                   en: "Al Atik et al. (2010) decompose σ_total² = τ² + φ². With N stations of the same event, only φ shrinks: φ_post = φ/√N. For τ = 0.458, φ = 0.598 and N = 3, σ_post = √(0.458² + 0.345²) = <b>0.573</b>, or roughly the 0.55 rounded figure quoted throughout.",
+                   id: "Al Atik dkk. (2010) memisahkan σ_total² = τ² + φ². Dengan N stasiun pada kejadian yang sama, hanya φ yang menyusut: φ_post = φ/√N. Untuk τ = 0,458, φ = 0,598, dan N = 3 → σ_post = √(0,458² + 0,345²) = <b>0,573</b>, kira-kira angka bulat 0,55 yang sering kami kutip." },
+  "m-r2":        { t: "R² = 0.729 baseline",
+                   en: "Mean coefficient of determination across 103 pseudo-spectral acceleration periods, measured by event-grouped 5-fold cross-validation on 25 058 three-component accelerograms (338 events, Java-Sunda, 2005–2024). Source: IDA-PTW manuscript, submitted IEEE Access April 2026.",
+                   id: "Rerata koefisien determinasi lintas 103 periode pseudo-spectral acceleration, diukur dengan validasi silang 5-fold berkelompok berdasarkan kejadian pada 25.058 akselerogram tiga-komponen (338 kejadian, Jawa-Sunda, 2005–2024). Sumber: naskah IDA-PTW, submit IEEE Access April 2026." },
+  "m-recall":    { t: "Damaging Recall 91.1 %",
+                   en: "Stage 1 XGBoost intensity gate routes each event to a PTW (3/5/8 s). Its recall on the Damaging class is the safety-critical number: 91.1 % ensures the vast majority of life-threatening events are routed to the longest PTW for the best spectral estimate.",
+                   id: "Gate intensitas XGBoost Stage 1 meneruskan setiap kejadian ke PTW (3/5/8 detik). Recall pada kelas Damaging adalah angka kritis keselamatan: 91,1 % memastikan mayoritas besar kejadian yang mengancam jiwa dirutekan ke PTW terpanjang untuk estimasi spektral terbaik." },
+  "m-topics":    { t: "Eight MQTT topic classes",
+                   en: "raw, feat, pred/urpd, pred/gate, pred/psa, alert, alert_site, health. Retention is granted only to alert, alert_site, and health; streaming telemetry is non-retained to avoid stale replays.",
+                   id: "raw, feat, pred/urpd, pred/gate, pred/psa, alert, alert_site, health. Retensi hanya diberikan pada alert, alert_site, dan health; telemetri streaming tidak di-retain untuk mencegah replay basi." },
+  "m-sites":     { t: "Five Architecture Decision Records",
+                   en: "ADR-0001 MQTT-as-bus, ADR-0002 model reuse, ADR-0003 catalog independence, ADR-0004 degraded-mode alert, ADR-0005 per-site topic projection. Each records the decision, alternatives, and consequences.",
+                   id: "ADR-0001 MQTT-sebagai-bus, ADR-0002 reuse model, ADR-0003 independensi katalog, ADR-0004 alert mode-terdegradasi, ADR-0005 proyeksi topik per-site. Masing-masing mencatat keputusan, alternatif, dan konsekuensinya." },
+
+  "p-blind":     { t: "Near-field blind zone in depth",
+                   en: "The inequality T_P + W + Δ ≤ T_S bounds the region where any warning can arrive. For Java-Sunda crustal parameters V_P = 6 km/s, V_S = 3.45 km/s the blind radius is V_P·V_S/(V_P − V_S) × (W + Δ) ≈ 8.1 × 5 = 40 km at canonical parameters. Only by shrinking W and Δ simultaneously (Stage 0 + messaging) do we get below 10 km.",
+                   id: "Pertidaksamaan T_P + W + Δ ≤ T_S membatasi wilayah yang dapat menerima peringatan. Untuk parameter kerak Jawa-Sunda V_P = 6 km/s, V_S = 3,45 km/s, radius blind adalah V_P·V_S/(V_P − V_S) × (W + Δ) ≈ 8,1 × 5 = 40 km pada parameter kanonik. Hanya dengan memperkecil W dan Δ secara bersamaan (Stage 0 + messaging) kita turun ke bawah 10 km." },
+  "p-satur":     { t: "Parameter saturation physics",
+                   en: "Lancieri & Zollo (2008) and Festa et al. (2008) established that τ_c and P_d saturate because the 3 s window captures only the rupture nucleation phase, which is statistically universal (Meier et al. 2017). Large events are indistinguishable from medium events in the first seconds — a fact confirmed by the 2011 Tohoku data.",
+                   id: "Lancieri & Zollo (2008) dan Festa dkk. (2008) menetapkan τ_c dan P_d saturasi karena jendela 3 detik hanya menangkap fase nukleasi rupture, yang secara statistik universal (Meier dkk. 2017). Kejadian besar tidak dapat dibedakan dari kejadian sedang dalam detik-detik awal — fakta yang dikonfirmasi data Tohoku 2011." },
+  "p-catalog":   { t: "Catalog latency",
+                   en: "BMKG catalog hypocenter is authoritative but arrives with 30–60 s latency — longer than the entire EEWS budget. IDA-PTW Stage 1.5 regresses epicentral distance directly from the 3 s window at 99.87 % routing fidelity, bypassing the catalog entirely. This must be preserved in the MQTT deployment.",
+                   id: "Hiposenter katalog BMKG adalah otoritatif tetapi datang dengan latensi 30–60 detik — lebih lama daripada keseluruhan anggaran EEWS. Stage 1.5 IDA-PTW meregresi jarak episentral langsung dari jendela 3 detik pada fidelitas routing 99,87 %, sepenuhnya melewati katalog. Ini harus dipertahankan dalam deployment MQTT." },
+  "p-bandwidth": { t: "Edge bandwidth economics",
+                   en: "A regional alert payload (~2 KB JSON) × 50 000 Jakarta buildings × 3 revisions per event ≈ 300 MB per event at the broker egress. The per-site projection reduces this by ~100× to ~30 KB per event since each site receives exactly one number.",
+                   id: "Payload alert regional (~2 KB JSON) × 50.000 gedung Jakarta × 3 revisi per kejadian ≈ 300 MB per kejadian di egress broker. Proyeksi per-site mereduksi angka ini ~100× menjadi ~30 KB per kejadian karena tiap site menerima tepat satu angka." },
+
+  "s-bridge":    { t: "bridge · SeedLink to MQTT",
+                   en: "Stateless service that subscribes to BMKG SeedLink streams and republishes 1-s chunks on eews/v1/raw/{net}/{sta}/{cha}. Uses obspy.clients.seedlink as the upstream client. QoS 1 with backpressure drop.",
+                   id: "Service stateless yang subscribe ke stream BMKG SeedLink dan republish chunk 1 detik di eews/v1/raw/{net}/{sta}/{cha}. Menggunakan obspy.clients.seedlink sebagai klien upstream. QoS 1 dengan drop saat backpressure." },
+  "s-urpd":      { t: "Stage 0 · URPD",
+                   en: "Gradient Boosting Classifier on 7 spectral features computed from a 0.5 s trailing window. Emits p_prob, near_field_flag, spectral_centroid_hz. AUC = 0.988 on IDA-PTW validation.",
+                   id: "Gradient Boosting Classifier pada 7 fitur spektral dari jendela 0,5 detik berjalan. Mengeluarkan p_prob, near_field_flag, spectral_centroid_hz. AUC = 0,988 pada validasi IDA-PTW." },
+  "s-feat":      { t: "features · 8 physics features",
+                   en: "Computes log10(peak_3ch), log10(Vs30), log10(dist_km), τ_c, log10(P_d), log10(CAV), log10(IV2), log10(H/V). Delegates to /Users/hanif/DL_Spectra/src/physics/feature_extractor.py.",
+                   id: "Menghitung log10(peak_3ch), log10(Vs30), log10(dist_km), τ_c, log10(P_d), log10(CAV), log10(IV2), log10(H/V). Delegasi ke /Users/hanif/DL_Spectra/src/physics/feature_extractor.py." },
+  "s-gate":      { t: "Stage 1 · intensity gate",
+                   en: "XGBoost classifier 4-class {Weak, Moderate, Strong, Damaging} over 3 s feature window. Routes each event to a PTW of 3/5/8 s. Damaging Recall 91.1 %.",
+                   id: "Klasifikasi XGBoost 4-kelas {Weak, Moderate, Strong, Damaging} pada jendela fitur 3 detik. Rute tiap kejadian ke PTW 3/5/8 detik. Damaging Recall 91,1 %." },
+  "s-dluhs2":    { t: "Stage 2 · DLUHS2 fold ensemble",
+                   en: "1-D residual CNN (stem + d1–d5 + 3 ResBlocks + AdaptiveAvgPool + aux) trained on 9 171 / 25 058 traces. Ensembles 5 folds. CPU inference 400 ms with torch.compile reduce-overhead.",
+                   id: "1-D residual CNN (stem + d1–d5 + 3 ResBlock + AdaptiveAvgPool + aux) dilatih pada 9.171 / 25.058 trace. Ensemble 5 fold. Inferensi CPU 400 ms dengan torch.compile reduce-overhead." },
+  "s-fusion":    { t: "fusion · decision engine",
+                   en: "Aggregates URPD, Gate, and PSA envelopes within 500 ms agreement window. Applies M1 Bayesian fusion across co-triggering stations. Publishes alert/{region}/{event_id} with QoS 2 retained.",
+                   id: "Menggabungkan envelope URPD, Gate, dan PSA dalam jendela kesepakatan 500 ms. Menerapkan fusi Bayes M1 lintas stasiun ko-trigger. Publikasi alert/{region}/{event_id} dengan QoS 2 retained." },
+  "s-projector": { t: "projector · per-site",
+                   en: "Subscribes to alert/+/+ and, for each registered site in sites.yaml, interpolates Sa(T1) and applies Δ_Vs30 + Δ_dist + Δ_HV edge corrections. Publishes SiteAlertPayload retained.",
+                   id: "Subscribe ke alert/+/+ dan, untuk tiap site terdaftar di sites.yaml, interpolasi Sa(T1) dan menerapkan koreksi edge Δ_Vs30 + Δ_dist + Δ_HV. Publikasi SiteAlertPayload retained." },
+
+  "mech-m1":     { t: "M1 · Multi-station Bayesian fusion",
+                   en: "Inverse-variance weighted mean of log10 Sa(T) across N co-triggering stations. Per Al Atik decomposition, only φ² shrinks by 1/N; τ² stays. Posterior σ = √(τ² + φ²/N). For N = 3, drops σ from 0.755 to ≈ 0.57.",
+                   id: "Rerata terbobot inverse-variance log10 Sa(T) lintas N stasiun ko-trigger. Sesuai dekomposisi Al Atik, hanya φ² yang menyusut 1/N; τ² tetap. σ posterior = √(τ² + φ²/N). Untuk N = 3, σ turun dari 0,755 ke ≈ 0,57." },
+  "mech-m2":     { t: "M2 · Progressive alert revision",
+                   en: "Same event_id, monotonically increasing revision field. Fusion publishes at t_P + 3 s, 5 s, 8 s. Retained message always the latest. +0.5 % R² per extra second on the high-PGA subset per IDA-PTW Table 12.",
+                   id: "event_id yang sama, field revision naik monoton. Fusion publikasi pada t_P + 3 s, 5 s, 8 s. Retained message selalu yang terakhir. +0,5 % R² per detik tambahan pada subset high-PGA sesuai Tabel 12 IDA-PTW." },
+  "mech-m3":     { t: "M3 · Edge site projection",
+                   en: "Site projector applies log10 Sa_site = log10 Sa_station + Δ_Vs30(T1) + Δ_dist(T1) + Δ_HV(T1). Δ surfaces are fitted from the IDA-PTW per-period residual table.",
+                   id: "Projector site menerapkan log10 Sa_site = log10 Sa_station + Δ_Vs30(T1) + Δ_dist(T1) + Δ_HV(T1). Permukaan Δ di-fit dari tabel residual per-periode IDA-PTW." },
+  "mech-m4":     { t: "M4 · Ensemble hypocenter",
+                   en: "Grid-search localisation of the hypocenter minimises Σ(d̂_i − d_i(λ,φ,z))² across N ≥ 3 Stage-1.5 distance estimates. The sharpened log10(dist) is an improved auxiliary input to Stage 2.",
+                   id: "Lokalisasi grid-search hiposenter meminimalkan Σ(d̂_i − d_i(λ,φ,z))² lintas N ≥ 3 estimasi jarak Stage 1.5. log10(dist) yang lebih tajam menjadi auxiliary input yang lebih baik untuk Stage 2." },
+  "mech-m5":     { t: "M5 · Spectrogram 2D branch",
+                   en: "Parallel branch over multi-scale STFT spectrograms, fused linearly with the 1-D DLUHS2 backbone. Münchmeyer et al. (2025) reported +3–5 % R² gain for PGA/PGV on similar architectures.",
+                   id: "Cabang paralel pada spektrogram STFT multi-skala, difusi linear dengan backbone 1-D DLUHS2. Münchmeyer dkk. (2025) melaporkan peningkatan +3–5 % R² untuk PGA/PGV pada arsitektur serupa." },
+  "mech-m6":     { t: "M6 · Physics-guided loss",
+                   en: "Penalty term on the loss when Sa(T) exceeds Abrahamson et al. (2014) GMPE ± 2σ at any period. SHAP-guided feature re-weighting tightens 16/84 percentiles without changing the median.",
+                   id: "Term penalti pada loss saat Sa(T) melampaui GMPE Abrahamson dkk. (2014) ± 2σ pada periode mana pun. Pembobotan ulang fitur yang dipandu SHAP mempersempit persentil 16/84 tanpa mengubah median." },
+};
+
+function openModal(key) {
+  const d = modalData[key];
+  if (!d) return;
+  modalTitle.textContent = d.t;
+  modalBody.innerHTML = d[currentLang] || d.en;
+  modalBd.classList.add("active");
+}
+function closeModal(e) {
+  if (!e || e.target.id === "modal-bd" || e.target.className === "close") {
+    modalBd.classList.remove("active");
+  }
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+
+// ============== CHARTS ==============
+let latencyChart, accuracyChart;
+function renderCharts() {
+  const latencyCtx = document.getElementById("chart-latency").getContext("2d");
+  if (latencyChart) latencyChart.destroy();
+  latencyChart = new Chart(latencyCtx, {
+    type: "bar",
+    data: {
+      labels: currentLang === "id"
+        ? ["SeedLink→broker","Fan-out broker","Stage 0 URPD","features","Gate Stage 1","DLUHS2 Stage 2","Fusion + publish"]
+        : ["SeedLink→broker","Broker fan-out","Stage 0 URPD","features","Gate Stage 1","DLUHS2 Stage 2","Fusion + publish"],
+      datasets: [{
+        label: currentLang === "id" ? "Anggaran latensi (ms)" : "Latency budget (ms)",
+        data: [50, 20, 80, 150, 30, 400, 50],
+        backgroundColor: ["#0b6e99","#0b6e99","#bc4c00","#0b6e99","#0b6e99","#6d35a8","#1a7f37"],
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      plugins: {
+        title: { display: true, text: currentLang === "id"
+              ? "Dekomposisi latensi 780 ms overhead — alert pertama pada PTW 3 detik = 3,78 detik wall-clock"
+              : "780 ms overhead latency decomposition — first alert at PTW 3 s = 3.78 s wall-clock",
+          color: "#1f2328", font: { size: 13, weight: "600" } },
+        legend: { display: false }
+      },
+      scales: {
+        y: { title: { display: true, text: "ms" }, beginAtZero: true },
+        x: { ticks: { font: { size: 10 } } }
+      },
+      animation: { duration: 600 }
+    }
+  });
+
+  const accCtx = document.getElementById("chart-accuracy").getContext("2d");
+  if (accuracyChart) accuracyChart.destroy();
+  const cfgLabels = currentLang === "id"
+    ? ["Baseline IDA-PTW","+ M2 progresif","+ M1 fusi (N=3)","+ M1+M2+M4"]
+    : ["IDA-PTW baseline","+ M2 progressive","+ M1 fusion (N=3)","+ M1+M2+M4"];
+  accuracyChart = new Chart(accCtx, {
+    type: "line",
+    data: {
+      labels: cfgLabels,
+      datasets: [
+        {
+          label: "R² (103-period mean)",
+          data: [0.729, 0.742, 0.742, 0.760],
+          borderColor: "#0b6e99",
+          backgroundColor: "rgba(11,110,153,0.15)",
+          yAxisID: "y",
+          tension: 0.25, fill: true, pointRadius: 4
+        },
+        {
+          label: "σ_total",
+          data: [0.755, 0.755, 0.552, 0.552],
+          borderColor: "#bc4c00",
+          backgroundColor: "rgba(188,76,0,0.15)",
+          yAxisID: "y1",
+          tension: 0.25, fill: false, pointRadius: 4, borderDash: [5,3]
+        }
+      ]
+    },
+    options: {
+      plugins: {
+        title: { display: true,
+                 text: currentLang === "id"
+                     ? "Proyeksi akurasi: R² naik, σ_total turun saat mekanisme ditambahkan"
+                     : "Projected accuracy: R² rises, σ_total falls as mechanisms are added",
+                 color: "#1f2328", font: { size: 13, weight: "600" } },
+        legend: { position: "top" }
+      },
+      scales: {
+        y:  { title: { display: true, text: "R²" }, min: 0.68, max: 0.80, position: "left" },
+        y1: { title: { display: true, text: "σ_total" }, min: 0.5, max: 0.8,  position: "right", grid: { drawOnChartArea: false } }
+      },
+      animation: { duration: 600 }
+    }
+  });
+}
+
+// ============== MANUSCRIPT RENDER ==============
+// Embedded front matter + Section I (so the page works even without server-side fetch).
+const manuscriptMD_en = `
+# A Hybrid MQTT-Based Inter-Service Architecture for Onsite–Regional Earthquake Early Warning with Blind-Zone Mitigation
+
+**Hanif Andi Nugraha¹\\*, Dede Djuhana¹˒², Adhi Harmoko Saputro¹, Sigit Pramono²**
+
+¹ Department of Physics, Universitas Indonesia, Depok 16424, Indonesia
+² The Agency for Meteorology, Climatology and Geophysics (BMKG), Jakarta 10110, Indonesia
+\\* hanif.andi@ui.ac.id
+
+*Target venue: IEEE Internet of Things Journal, April 2026.*
+
+---
+
+## Abstract
+
+Onsite Earthquake Early Warning Systems (EEWS) face a fundamental trilemma: *(i)* a near-field blind zone of ~38 km where the P–S travel-time difference falls below the sum of the observation window and the alert dissemination latency, *(ii)* saturation of canonical magnitude parameters on large ruptures, and *(iii)* dependence on network-catalog hypocenters that arrive 30–60 s after the P onset. This article proposes a hybrid MQTT-based inter-service architecture for EEWS that makes the messaging substrate an explicit design contribution rather than an implementation detail. Eight containerised services exchange MiniSEED chunks, engineered physics features, per-stage predictions, and retained alerts over an MQTT v5 broker whose topic tree, Quality-of-Service differentiation, and ACL model are formally specified. The architecture incorporates the upstream Intensity-Driven Adaptive P-wave Time Window (IDA-PTW) pipeline at the inference layer, preserving its catalog-independent R² = 0.729 performance on 25 058 three-component accelerograms.
+
+**Index Terms —** Earthquake early warning, MQTT, Internet of Things, hybrid EEWS, blind zone, near-field alert, publish-subscribe, edge computing, seismic sensor networks, Java-Sunda subduction zone, spectral acceleration, InaTEWS.
+
+## I. Introduction
+
+### A. The onsite EEWS trilemma
+
+Earthquake Early Warning Systems (EEWS) transform the first seconds of the P-wave coda into actionable warnings for shaking that has not yet arrived at the target site. Two paradigms coexist. **Network (regional)** EEWS, operated by Japan's JMA, the U.S. ShakeAlert system, and Mexico's SASMEX, triangulate hypocenters from multiple stations and then forecast shaking via ground-motion prediction equations; network triangulation latency is tens of seconds. **Onsite** EEWS, originating with Kanamori's single-station concept, extract magnitude-proxy parameters directly from a trailing P-wave window at each station, producing warnings within 2–3 s of P onset at the cost of spatial coverage uncertainty.
+
+The onsite paradigm faces a well-characterised trilemma. First, the **near-field blind zone** spans approximately 38 km around each station; for events closer than this radius the P–S travel-time difference is insufficient to overlay the observation window plus the dissemination budget. Second, canonical parameters **saturate** above M_w ≈ 7 because the 3-second window captures only the rupture nucleation phase. Third, autonomous onsite operation historically required **catalog-independence**, which remained elusive until deep-learning distance regressors reached ≥ 99 % routing fidelity.
+
+> The full manuscript continues with Sections II–VII plus appendices; see the Download panel for the complete draft.
+`;
+
+const manuscriptMD_id = `
+# Arsitektur Hybrid Berbasis MQTT untuk Sistem Peringatan Dini Gempa Onsite–Regional dengan Mitigasi Blind-Zone
+
+**Hanif Andi Nugraha¹\\*, Dede Djuhana¹˒², Adhi Harmoko Saputro¹, Sigit Pramono²**
+
+¹ Departemen Fisika, FMIPA, Universitas Indonesia, Depok 16424, Indonesia
+² Badan Meteorologi, Klimatologi, dan Geofisika (BMKG), Jakarta 10110, Indonesia
+\\* hanif.andi@ui.ac.id
+
+*Target jurnal: IEEE Internet of Things Journal, April 2026.*
+
+---
+
+## Abstrak
+
+Sistem Peringatan Dini Gempa (EEWS) onsite menghadapi trilema mendasar: *(i)* blind zone near-field ~38 km di mana selisih waktu tempuh P–S jatuh di bawah total jendela pengamatan + latensi diseminasi alert, *(ii)* saturasi parameter magnitudo kanonik pada rupture besar, dan *(iii)* ketergantungan pada hiposenter katalog jaringan yang datang 30–60 detik setelah onset-P. Artikel ini mengusulkan arsitektur hybrid antar-service berbasis MQTT untuk EEWS yang menjadikan substrat messaging sebagai kontribusi desain eksplisit, bukan sekadar detail implementasi. Delapan service terkontainer saling berkomunikasi lewat MQTT v5 broker yang pohon topik, diferensiasi QoS, dan model ACL-nya dispesifikasi secara formal.
+
+**Kata kunci —** Peringatan dini gempa, MQTT, Internet of Things, EEWS hybrid, blind zone, alert near-field, publish-subscribe, edge computing, jaringan sensor seismik, zona subduksi Jawa-Sunda, spectral acceleration, InaTEWS.
+
+## I. Pendahuluan
+
+### A. Trilema EEWS onsite
+
+Sistem Peringatan Dini Gempa (EEWS) mengubah detik-detik awal coda P-wave menjadi peringatan yang dapat ditindaklanjuti untuk guncangan yang belum tiba di site target. Dua paradigma hidup berdampingan. EEWS **jaringan (regional)**, dioperasikan JMA Jepang, ShakeAlert AS, dan SASMEX Meksiko, melakukan triangulasi hiposenter dari banyak stasiun lalu memprediksi guncangan via persamaan GMPE; latensi triangulasi jaringan berkisar puluhan detik. EEWS **onsite**, yang dimulai dari konsep stasiun tunggal Kanamori, mengekstraksi parameter proksi-magnitudo langsung dari jendela P-wave di setiap stasiun, menghasilkan peringatan dalam 2–3 detik dari onset-P dengan mengorbankan ketidakpastian cakupan spasial.
+
+Paradigma onsite menghadapi trilema yang terdokumentasi dengan baik. Pertama, **blind zone near-field** membentang sekitar 38 km dari setiap stasiun. Kedua, parameter kanonik **saturasi** di atas M_w ≈ 7 karena jendela 3 detik hanya menangkap fase nukleasi rupture. Ketiga, operasi onsite otonom secara historis memerlukan **independensi katalog**, yang tetap sulit dicapai hingga regresor jarak berbasis deep learning mencapai fidelitas routing ≥ 99 %.
+
+> Naskah lengkap berisi Bagian II–VII dan lampiran; lihat panel Unduh untuk draf penuh.
+`;
+
+function renderManuscript() {
+  const target = document.getElementById("manuscript-content");
+  const md = currentLang === "id" ? manuscriptMD_id : manuscriptMD_en;
+  target.innerHTML = marked.parse(md);
+}
+
+// ============== INIT ==============
+window.addEventListener("DOMContentLoaded", () => {
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "base",
+    themeVariables: {
+      primaryColor: "#eaf4fb",
+      primaryTextColor: "#003a55",
+      primaryBorderColor: "#0b6e99",
+      lineColor: "#475569",
+      fontFamily: "-apple-system, Segoe UI, Arial, sans-serif",
+      fontSize: "14px"
+    },
+    flowchart: { htmlLabels: true, curve: "basis", nodeSpacing: 40, rankSpacing: 50 }
+  });
+  renderCharts();
+  renderManuscript();
+});
+</script>
+
+</body>
+</html>
