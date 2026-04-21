@@ -268,7 +268,7 @@ Mechanism M1 (multi-station Bayesian fusion) reduces $\sigma_{total}$ from 0.755
 
 Table IV summarises the projected trajectory. Note that the IDA-PTW baseline row is measured on the full cross-validation [30]; the other rows are model-based projections grounded in the Al Atik decomposition [31] and the empirical $R^2$–window curve from [30, Table 12]. Full empirical validation of M1–M4 will require separate training runs and is deferred to a companion experimental paper (ADR-0002).
 
-**Table IV · IDA-PTW baseline and projected accuracy under M1–M4.**
+**Table IV · IDA-PTW baseline and projected accuracy under M1–M4.** The baseline row is a measured result carried unchanged from [30]; the remaining rows are model-based projections derived from the Al Atik decomposition [31] and the observed $R^2$-versus-window relationship in [30, Table 12]. Empirical validation of M1–M4 is deferred to a companion paper in preparation and is out of scope for the present architecture submission (ADR-0002).
 
 | Configuration | $R^2$ (103-period mean) | $\sigma_{total}$ |
 |---|:---:|:---:|
@@ -345,9 +345,13 @@ Future work will proceed along four axes. *(i)* Empirical retraining and validat
 
 ---
 
+## Data and Code Availability
+
+The reference implementation accompanying this article — Pydantic message contracts, service skeletons, configuration templates, and an interactive architecture review — is publicly available at https://hanif7108.github.io/dl-spectra-mqtt-review/ under the MIT license (code) and CC BY 4.0 (documentation). The upstream IDA-PTW framework [30] is available as an arXiv preprint providing the full methodology, training configurations, and per-period residual tables used as inputs to Tables III–VI of this article. Model checkpoints and the IDA-PTW reference dataset are maintained by the authors at Universitas Indonesia and BMKG, and are available from the corresponding author upon reasonable request and subject to BMKG data-sharing policies. No new primary accelerograph data were collected for this article; the evaluation reuses the 25 058-trace Java-Sunda dataset defined in [30].
+
 ## Acknowledgments
 
-The authors thank the BMKG InaTEWS operations team for providing access to the accelerograph archive, and the Department of Physics, Universitas Indonesia, for computational resources. The IDA-PTW framework that underlies the inference layer is the product of previous work [30].
+The authors thank the BMKG InaTEWS operations team for providing access to the accelerograph archive, and the Department of Physics, Universitas Indonesia, for computational resources. The IDA-PTW framework that underlies the inference layer is the product of previous work [30]; the present article extends the upstream framework with the messaging substrate, four fusion mechanisms, and the operational deployment analysis, without retraining any model weights.
 
 ---
 
@@ -411,7 +415,7 @@ The authors thank the BMKG InaTEWS operations team for providing access to the a
 
 [29] F. Lara, A. Casanova, J. Ruiz-Barzola, et al., "Earthquake early warning starting from 3 s of records on a single station with machine learning," *Journal of Geophysical Research: Solid Earth*, vol. 128, e2023JB026575, 2023, doi: 10.1029/2023JB026575.
 
-[30] H. A. Nugraha, D. Djuhana, A. H. Saputro, and S. Pramono, "A saturation-aware multi-stage framework for intensity-driven adaptive P-wave time window selection in real-time spectral acceleration prediction: Operational design for the Java-Sunda subduction zone," *IEEE Access*, submitted April 2026.
+[30] H. A. Nugraha, D. Djuhana, A. H. Saputro, and S. Pramono, "A saturation-aware multi-stage framework for intensity-driven adaptive P-wave time window selection in real-time spectral acceleration prediction: Operational design for the Java-Sunda subduction zone," *arXiv preprint* arXiv:2504.XXXXX [eess.SP], 2026. (Manuscript concurrently under review at *IEEE Access*.)
 
 [31] L. Al Atik, N. Abrahamson, J. J. Bommer, F. Scherbaum, F. Cotton, and N. Kuehn, "The variability of ground-motion prediction models and its components," *Seismological Research Letters*, vol. 81, no. 5, pp. 794–801, 2010.
 

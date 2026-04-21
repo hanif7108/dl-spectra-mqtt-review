@@ -268,7 +268,7 @@ Mekanisme M1 (fusi Bayesian multi-stasiun) menurunkan $\sigma_{total}$ dari 0,75
 
 Tabel IV merangkum trajektori terproyeksi. Perhatikan bahwa baris baseline IDA-PTW diukur pada validasi silang penuh [30]; baris lainnya adalah proyeksi berbasis-model yang didasarkan pada dekomposisi Al Atik [31] dan kurva $R^2$-jendela empiris dari [30, Tabel 12]. Validasi empiris penuh M1–M4 memerlukan run pelatihan terpisah dan ditunda ke paper eksperimental pendamping (ADR-0002).
 
-**Tabel IV · Baseline IDA-PTW dan akurasi terproyeksi di bawah M1–M4.**
+**Tabel IV · Baseline IDA-PTW dan akurasi terproyeksi di bawah M1–M4.** Baris baseline adalah hasil terukur yang dibawa tanpa perubahan dari [30]; baris lainnya adalah proyeksi berbasis-model yang diturunkan dari dekomposisi Al Atik [31] dan relasi $R^2$-versus-jendela yang diamati di [30, Tabel 12]. Validasi empiris M1–M4 ditunda ke paper pendamping yang sedang disiapkan dan berada di luar cakupan submission arsitektur ini (ADR-0002).
 
 | Konfigurasi | $R^2$ (rata-rata 103 periode) | $\sigma_{total}$ |
 |---|:---:|:---:|
@@ -345,9 +345,13 @@ Pekerjaan masa depan akan berjalan sepanjang empat sumbu. *(i)* Retraining empir
 
 ---
 
+## Ketersediaan Data dan Kode
+
+Implementasi referensi yang menyertai artikel ini — kontrak pesan Pydantic, kerangka layanan, template konfigurasi, dan tampilan arsitektur interaktif — tersedia publik di https://hanif7108.github.io/dl-spectra-mqtt-review/ di bawah lisensi MIT (kode) dan CC BY 4.0 (dokumentasi). Kerangka IDA-PTW hulu [30] tersedia sebagai preprint arXiv yang menyediakan metodologi lengkap, konfigurasi pelatihan, dan tabel residual per-periode yang digunakan sebagai input untuk Tabel III–VI artikel ini. Checkpoint model dan dataset referensi IDA-PTW dikelola penulis di Universitas Indonesia dan BMKG, dan tersedia dari penulis korespondensi atas permintaan yang wajar, tunduk pada kebijakan berbagi data BMKG. Tidak ada data akselerograf primer baru yang dikumpulkan untuk artikel ini; evaluasi menggunakan kembali dataset 25.058 trace Jawa-Sunda yang didefinisikan di [30].
+
 ## Ucapan Terima Kasih
 
-Penulis berterima kasih kepada tim operasi BMKG InaTEWS karena menyediakan akses ke arsip akselerograf, dan Departemen Fisika Universitas Indonesia untuk sumber daya komputasi. Kerangka IDA-PTW yang mendasari lapisan inferensi adalah hasil karya sebelumnya [30].
+Penulis berterima kasih kepada tim operasi BMKG InaTEWS karena menyediakan akses ke arsip akselerograf, dan Departemen Fisika Universitas Indonesia untuk sumber daya komputasi. Kerangka IDA-PTW yang mendasari lapisan inferensi adalah hasil karya sebelumnya [30]; artikel ini memperluas kerangka hulu dengan substrat messaging, empat mekanisme fusi, dan analisis deployment operasional, tanpa melakukan retraining pada bobot model apa pun.
 
 ---
 
@@ -411,7 +415,7 @@ Penulis berterima kasih kepada tim operasi BMKG InaTEWS karena menyediakan akses
 
 [29] F. Lara, A. Casanova, J. Ruiz-Barzola, dkk., "Earthquake early warning starting from 3 s of records on a single station with machine learning," *Journal of Geophysical Research: Solid Earth*, vol. 128, e2023JB026575, 2023, doi: 10.1029/2023JB026575.
 
-[30] H. A. Nugraha, D. Djuhana, A. H. Saputro, dan S. Pramono, "A saturation-aware multi-stage framework for intensity-driven adaptive P-wave time window selection in real-time spectral acceleration prediction: Operational design for the Java-Sunda subduction zone," *IEEE Access*, disubmit April 2026.
+[30] H. A. Nugraha, D. Djuhana, A. H. Saputro, dan S. Pramono, "A saturation-aware multi-stage framework for intensity-driven adaptive P-wave time window selection in real-time spectral acceleration prediction: Operational design for the Java-Sunda subduction zone," *arXiv preprint* arXiv:2504.XXXXX [eess.SP], 2026. (Naskah bersamaan dalam review di *IEEE Access*.)
 
 [31] L. Al Atik, N. Abrahamson, J. J. Bommer, F. Scherbaum, F. Cotton, dan N. Kuehn, "The variability of ground-motion prediction models and its components," *Seismological Research Letters*, vol. 81, no. 5, pp. 794–801, 2010.
 
